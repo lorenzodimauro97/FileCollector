@@ -1,16 +1,40 @@
-﻿html, body {
+﻿
+:root {
+    --app-primary-color: #00796B;
+    --app-primary-color-hover: #00695C;
+    --app-primary-color-active: #00574B;
+
+    --app-primary-color-light: #E0F2F1;
+    --app-primary-color-light-hover: #B2DFDB;
+    --app-primary-color-light-active: #80CBC4;
+
+    --app-link-color: var(--app-primary-color);
+    --app-link-color-hover: var(--app-primary-color-hover);
+
+    --sidebar-bg: #1E2A3A;
+    --sidebar-top-row-bg: rgba(0, 0, 0, 0.25);
+    --sidebar-brand-color: #E0E6EB;
+    --sidebar-nav-link-color: #A7B4C2;
+    --sidebar-nav-link-hover-bg: #2A3B4F;
+    --sidebar-nav-link-hover-text: #FFFFFF;
+    --sidebar-nav-link-active-bg: var(--app-primary-color);
+    --sidebar-nav-link-active-text: #FFFFFF;
+
+    --body-bg: #FFFFFF;
+    --body-text-color: #343A40;
+    --top-row-main-bg: #f7f7f7;
+    --top-row-main-border: #d6d5d5;
+
+    --error-ui-bg: #FFF3CD;
+    --error-ui-text: #664D03;
+}
+
+html, body {
     font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: var(--body-text-color);
+    background-color: var(--body-bg);
 }
 
-a, .btn-link {
-    color: #0366d6;
-}
-
-.btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
-}
 
 app {
     position: relative;
@@ -29,95 +53,123 @@ app {
     flex: 1;
 }
 
-    .main .top-row {
-        background-color: #f7f7f7;
-        border-bottom: 1px solid #d6d5d5;
-        justify-content: flex-end;
-    }
-
-        .main .top-row > a, .main .top-row .btn-link {
-            white-space: nowrap;
-            margin-left: 1.5rem;
-        }
-
-        .main .top-row a:first-child {
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-.sidebar {
-    background-color: lightgray;
+.main .top-row {
+    background-color: var(--top-row-main-bg);
+    border-bottom: 1px solid var(--top-row-main-border);
+    justify-content: flex-end;
 }
 
-    .sidebar .top-row {
-        background-color: rgba(0,0,0,0.4);
-    }
+.main .top-row > a, .main .top-row .btn-link {
+    white-space: nowrap;
+    margin-left: 1.5rem;
+    color: var(--app-link-color);
+    text-decoration: none;
+}
+.main .top-row > a:hover, .main .top-row .btn-link:hover {
+    color: var(--app-link-color-hover);
+    text-decoration: underline;
+}
 
-    .sidebar .navbar-brand {
-        font-size: 1.1rem;
-    }
 
-    .sidebar .oi {
-        width: 2rem;
-        font-size: 1.1rem;
-        vertical-align: text-top;
-        top: -2px;
-    }
+.sidebar {
+    background-color: var(--sidebar-bg);
+}
 
-    .sidebar .nav-item {
-        font-size: 0.9rem;
-        padding-bottom: 0.5rem;
-    }
+.sidebar .top-row {
+    background-color: var(--sidebar-top-row-bg);
+    padding-left: 0.5rem;
+}
 
-        .sidebar .nav-item:first-of-type {
-            padding-top: 1rem;
-        }
+.sidebar .navbar-brand {
+    font-size: 1.1rem;
+    color: var(--sidebar-brand-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow: hidden;
+}
 
-        .sidebar .nav-item:last-of-type {
-            padding-bottom: 1rem;
-        }
+.sidebar .navbar-brand .brand-icon {
+    display: inline-flex;
+    align-items: center;
+}
 
-        .sidebar .nav-item a {
-            color: #d7d7d7;
-            border-radius: 4px;
-            height: 3rem;
-            display: flex;
-            align-items: center;
-            line-height: 3rem;
-        }
+.sidebar .navbar-brand .brand-text {
+    white-space: nowrap;
+    transition: opacity 0.3s ease-in-out, max-width 0.3s ease-in-out;
+    opacity: 1;
+    max-width: 200px;
+}
 
-            .sidebar .nav-item a.active {
-                background-color: rgba(255,255,255,0.25);
-                color: white;
-            }
 
-            .sidebar .nav-item a:hover {
-                background-color: rgba(255,255,255,0.1);
-                color: white;
-            }
+.sidebar .nav-item {
+    font-size: 0.9rem;
+}
+
+.sidebar .nav-item:first-of-type {
+    padding-top: 0.5rem;
+}
+
+.sidebar .nav-item:last-of-type {
+    padding-bottom: 0.5rem;
+}
+
+.sidebar .nav-link {
+    color: var(--sidebar-nav-link-color);
+    border-radius: 4px;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    gap: 0.75rem;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    text-decoration: none;
+}
+
+.sidebar .nav-link .nav-text {
+    display: inline;
+    white-space: nowrap;
+    transition: opacity 0.3s ease-in-out, max-width 0.3s ease-in-out;
+    opacity: 1;
+    max-width: 150px;
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--sidebar-nav-link-active-bg);
+    color: var(--sidebar-nav-link-active-text);
+}
+
+.sidebar .nav-link:hover {
+    background-color: var(--sidebar-nav-link-hover-bg);
+    color: var(--sidebar-nav-link-hover-text);
+}
 
 .content {
     padding-top: 1.1rem;
 }
 
 .navbar-toggler {
-    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+}
+.navbar-toggler:focus {
+    outline: none;
+    box-shadow: none;
 }
 
-.valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+.sidebar {
+    width: 100%;
 }
 
-.invalid {
-    outline: 1px solid red;
+.nav-scrollable.collapse {
+    display: none;
 }
-
-.validation-message {
-    color: red;
+.nav-scrollable {
+    display: block;
 }
 
 #blazor-error-ui {
-    background: lightyellow;
+    background: var(--error-ui-bg);
+    color: var(--error-ui-text);
     bottom: 0;
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
     display: none;
@@ -128,26 +180,14 @@ app {
     z-index: 1000;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-    }
-
-@media (max-width: 767.98px) {
-    .main .top-row:not(.auth) {
-        display: none;
-    }
-
-    .main .top-row.auth {
-        justify-content: space-between;
-    }
-
-    .main .top-row a, .main .top-row .btn-link {
-        margin-left: 0;
-    }
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+    color: var(--error-ui-text);
 }
+
 
 @media (min-width: 768px) {
     app {
@@ -159,25 +199,233 @@ app {
         height: 100vh;
         position: sticky;
         top: 0;
+        transition: width 0.3s ease-in-out;
     }
 
-    .main .top-row {
-        position: sticky;
-        top: 0;
-        z-index: 1;
+    .sidebar .navbar-brand .brand-text {
+        opacity: 0;
+        max-width: 0;
+        overflow: hidden;
+        margin-left: -0.5rem;
+    }
+    .sidebar .top-row {
+        justify-content: center;
     }
 
-    .main > div {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
-    }
 
     .navbar-toggler {
         display: none;
     }
 
+    .nav-scrollable,
     .sidebar .collapse {
-        /* Never collapse the sidebar for wide screens */
-        display: block;
+        display: block !important;
     }
+
+    .sidebar .nav-link {
+        justify-content: center;
+        padding: 0;
+        height: 50px;
+    }
+
+    .sidebar .nav-link .nav-text {
+        display: none;
+        opacity: 0;
+        max-width: 0;
+        overflow: hidden;
+    }
+
+    .sidebar .nav-item.px-3 {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    .main > div:first-child {
+        padding-left: 1rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+
+.btn {
+    font-family: inherit;
+    font-weight: 600;
+    border-radius: 4px;
+    padding: 0.6rem 1.3rem;
+    line-height: 1.5;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+
+    border: 1px solid transparent;
+    box-shadow: none;
+
+    transition: background-color 0.15s ease-out,
+    border-color 0.15s ease-out,
+    color 0.15s ease-out,
+    transform 0.1s ease-out,
+    outline-color 0.15s ease-out;
+}
+
+.btn:focus-visible {
+    outline-offset: 2px;
+    outline: 2px solid var(--app-primary-color);
+}
+.btn:focus {
+    outline: none;
+}
+
+
+.btn-primary {
+    background-color: var(--app-primary-color);
+    color: #fff;
+    border-color: var(--app-primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--app-primary-color-hover);
+    border-color: var(--app-primary-color-hover);
+    color: #fff;
+    text-decoration: none;
+}
+
+.btn-primary:active, .btn-primary.active {
+    background-color: var(--app-primary-color-active);
+    border-color: var(--app-primary-color-active);
+    color: #fff;
+    transform: translateY(1px);
+}
+
+.btn-primary:focus-visible {
+    outline-color: var(--app-primary-color);
+}
+
+.btn-secondary {
+    background-color: var(--app-primary-color-light);
+    color: var(--app-primary-color);
+    border-color: transparent;
+}
+
+.btn-secondary:hover {
+    background-color: var(--app-primary-color-light-hover);
+    color: var(--app-primary-color);
+    text-decoration: none;
+}
+
+.btn-secondary:active, .btn-secondary.active {
+    background-color: var(--app-primary-color-light-active);
+    color: var(--app-primary-color);
+    transform: translateY(1px);
+}
+
+.btn-secondary:focus-visible {
+    outline-color: var(--app-primary-color);
+}
+
+.btn-link {
+    background-color: transparent;
+    color: var(--app-link-color);
+    border-color: transparent;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.6rem 0.8rem;
+}
+
+.btn-link:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    color: var(--app-link-color-hover);
+    text-decoration: underline;
+}
+
+.btn-link:active, .btn-link.active {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--app-link-color-hover);
+    transform: none;
+}
+
+.btn-link:focus-visible {
+    outline-color: var(--app-link-color);
+    text-decoration: underline;
+}
+
+.btn:disabled, .btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-primary:disabled, .btn-primary.disabled {
+    background-color: var(--app-primary-color) !important;
+    border-color: var(--app-primary-color) !important;
+    color: #fff !important;
+}
+.btn-secondary:disabled, .btn-secondary.disabled {
+    background-color: var(--app-primary-color-light) !important;
+    color: var(--app-primary-color) !important;
+    border-color: transparent !important;
+}
+.btn-link:disabled, .btn-link.disabled {
+    background-color: transparent !important;
+    color: var(--app-link-color) !important;
+}
+
+.file-tree-node {
+    display: flex;
+    align-items: center;
+    padding: 1px 0; /* Reduced padding */
+    font-size: 0.9rem; /* Slightly smaller font for tree */
+}
+
+.file-tree-node .form-check-input {
+    margin-top: 0.15em; /* Align checkbox better with text */
+}
+
+.file-tree-container {
+    background-color: #fdfdfd; /* Slightly off-white background for the tree area */
+}
+
+/* Style for selected text area */
+textarea.form-control[readonly] {
+    background-color: #eef1f5; /* Light background for readonly textarea */
+    color: #212529;
+    cursor: default;
+}
+
+.merged-content-viewer .file-block {
+    margin-bottom: 1rem; /* Space between file blocks */
+}
+
+.merged-content-viewer .file-block:last-child {
+    margin-bottom: 0;
+}
+
+.merged-content-viewer .file-header,
+.merged-content-viewer .file-footer {
+    font-family: Consolas, 'Courier New', monospace; /* Consistent monospaced font */
+    font-style: italic;
+    color: #adb5bd; /* A light grey, adjust to fit Prism theme */
+    font-size: 0.85em;
+    margin: 0.3em 0;
+    padding: 0 0.5em; /* Align with pre padding if any */
+}
+
+.merged-content-viewer .error-block .file-header,
+.merged-content-viewer .error-block pre code {
+    color: #dc3545 !important; /* Red for errors */
+}
+
+
+/* Ensure Prism's <pre> blocks take full width and look good in the container */
+.merged-content-viewer pre[class*="language-"] {
+    margin-top: 0.2em !important;
+    margin-bottom: 0.2em !important;
+    border-radius: 0.25rem !important; /* Bootstrap-like rounded corners */
+    /* Okaidia theme already has padding, adjust if needed */
+}
+
+/* Placeholder styling */
+.merged-content-placeholder {
+    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
 }

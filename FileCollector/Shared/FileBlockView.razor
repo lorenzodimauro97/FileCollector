@@ -1,0 +1,150 @@
+﻿@using System.Net
+@inject IJSRuntime JsRuntime
+@implements IAsyncDisposable
+
+<div class="file-block @(Block.IsError ? "error-block" : "")">
+    <p class="file-header">// File: @Block.FilePath</p>
+    @if (Block.IsError)
+    {
+        <pre><code class="language-none">// ERROR reading file: @Block.ErrorMessage</code></pre>
+    }
+    else
+    {
+        <pre id="@PreElementId" class="line-numbers @Block.LanguageClass"><code class="@Block.LanguageClass">@_displayContent</code></pre>
+        @if (_isHighlightingInProgress)
+        {
+            <small class="highlight-status"><em>Highlighting...</em></small>
+        }
+        else if (!string.IsNullOrEmpty(_highlightingError))
+        {
+            <small class="highlight-status error"><em>Highlighting error: @_highlightingError</em></small>
+        }
+    }
+    @if (!Block.IsError)
+    {
+        <p class="file-footer">// End of file: @Block.FilePath</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public FileBlockViewModel Block { get; set; } = null!;
+
+    private string PreElementId => $"pre-{Block.UniqueId}";
+    private DotNetObjectReference<FileBlockView>? _dotNetRef;
+
+    private MarkupString _displayContent;
+    private bool _isHighlightingInProgress = false;
+    private bool _highlightingAttempted = false;
+    private string? _highlightingError = null;
+
+    protected override void OnParametersSet()
+    {
+        // If the block content changes, we need to reset and potentially re-highlight
+        if (Block != null && !_highlightingAttempted && !Block.IsError && !string.IsNullOrEmpty(Block.Content))
+        {
+            // Initially display HTML-encoded raw content
+            _displayContent = (MarkupString)WebUtility.HtmlEncode(Block.Content);
+            _isHighlightingInProgress = false; // Will be set true when JS call is made
+            _highlightingError = null;
+        }
+        else if (Block != null && Block.IsError)
+        {
+             _displayContent = (MarkupString)string.Empty; // Error is handled above
+        }
+        else if (Block != null && string.IsNullOrEmpty(Block.Content))
+        {
+            _displayContent = (MarkupString)string.Empty; // Empty content
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Block != null && !Block.IsError && !string.IsNullOrEmpty(Block.Content) && !_highlightingAttempted && !_isHighlightingInProgress)
+        {
+            _highlightingAttempted = true; // Mark that we are trying to highlight this block
+            _isHighlightingInProgress = true;
+            _highlightingError = null;
+            StateHasChanged(); // Show "Highlighting..."
+
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                var prismLanguage = GetPrismLanguageAlias(Block.LanguageClass);
+                // Ensure worker is initialized (though interop.js tries to do it on load)
+                // await JsRuntime.InvokeVoidAsync("blazorInterop.initializeHighlighterWorker"); // Already called in interop.js
+                await JsRuntime.InvokeVoidAsync(
+                    "blazorInterop.requestHighlighting",
+                    Block.UniqueId.ToString(),
+                    Block.Content, // Send raw content
+                    prismLanguage,
+                    _dotNetRef
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error requesting highlighting for {PreElementId}: {ex.Message}");
+                _isHighlightingInProgress = false;
+                _highlightingError = "JS interop failed.";
+                // _displayContent remains the HTML-encoded raw content
+                StateHasChanged();
+                if (_dotNetRef != null) // Clean up if JS call failed before worker could use it
+                {
+                    _dotNetRef.Dispose();
+                    _dotNetRef = null;
+                }
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void ReceiveHighlightedContent(string html, string? error)
+    {
+        _isHighlightingInProgress = false;
+        if (!string.IsNullOrEmpty(error))
+        {
+            _highlightingError = error;
+            Console.WriteLine($"Highlighting failed for {Block.FilePath}: {error}");
+            // _displayContent is already the HTML-encoded raw content, so no change needed on error if that's the desired fallback
+        }
+        else
+        {
+            _highlightingError = null;
+            _displayContent = (MarkupString)html;
+        }
+        StateHasChanged();
+
+        // The _dotNetRef is implicitly handled by JS side (removed from queue)
+        // and will be disposed by this component's DisposeAsync.
+        // If this method is called, it means JS used the reference, so we can nullify our C# side ref.
+        // However, it's safer for DisposeAsync to handle it.
+    }
+
+    private string GetPrismLanguageAlias(string langClass)
+    {
+        if (string.IsNullOrEmpty(langClass) || !langClass.StartsWith("language-"))
+        {
+            return "none"; // Prism might treat 'none' as plain text or fallback.
+                           // Or use a very generic alias like 'clike' or 'markup' if that's better.
+        }
+        var alias = langClass.Substring("language-".Length);
+        // Handle specific aliases if Prism uses different names than CSS classes
+        // e.g., if language-markup is for cshtml, Prism might expect 'cshtml'
+        if (alias == "markup" && Block.FilePath.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)) return "cshtml";
+        if (alias == "tsx") return "typescript"; // Prism often groups tsx under typescript or jsx
+        if (alias == "jsx") return "javascript"; // Prism often groups jsx under javascript
+        return alias;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_dotNetRef != null)
+        {
+            // TODO: If the component is disposed before the worker finishes,
+            // we might want to tell JS to cancel or ignore the result for this ID.
+            // For now, JS will try to call back, find no helper, and log a warning.
+            _dotNetRef.Dispose();
+            _dotNetRef = null;
+        }
+    }
+}

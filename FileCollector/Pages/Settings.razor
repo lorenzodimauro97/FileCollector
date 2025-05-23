@@ -1,0 +1,207 @@
+﻿@page "/settings"
+@using System.IO
+@using FileCollector.Services.Settings
+@inject SettingsService SettingsSvc
+@inject ILogger<Settings> Logger
+
+<h3>Ignore Settings</h3>
+<p>Manage files and folders to ignore. Patterns follow .gitignore syntax (e.g., <code>node_modules/</code>, <code>*.log</code>, <code>temp/</code>).</p>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h4>Current Ignore Patterns</h4>
+        @if (_ignorePatterns == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (!_ignorePatterns.Any())
+        {
+            <p><em>No ignore patterns defined.</em></p>
+        }
+        else
+        {
+            <ul class="list-group mb-3">
+                @foreach (var pattern in _ignorePatterns)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <code>@pattern</code>
+                        <button class="btn btn-sm btn-danger" @onclick="() => RemovePattern(pattern)">
+                            <TablerIcon OutlineIcon="TablerIconOutlineName.Trash" Size="16px" /> Remove
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" @bind="_newPattern" placeholder="Add new pattern (e.g., bin/ or *.tmp)" @onkeyup="HandleInputKeyUp" />
+            <button class="btn btn-primary" @onclick="AddPattern" disabled="@string.IsNullOrWhiteSpace(_newPattern)">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.Plus" /> Add
+            </button>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <h4>Import from .gitignore</h4>
+        <p>Paste the content of a .gitignore file below or upload one.</p>
+        
+        <div class="mb-3">
+            <label for="gitignoreContent" class="form-label">Paste .gitignore content:</label>
+            <textarea id="gitignoreContent" class="form-control" rows="5" @bind="_gitIgnoreContentInput"></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="fileUpload" class="form-label">Or upload .gitignore file:</label>
+            <InputFile id="fileUpload" OnChange="HandleFileSelected" class="form-control" accept=".gitignore, .txt" />
+        </div>
+        <button class="btn btn-success" @onclick="ImportGitIgnore" disabled="@(string.IsNullOrWhiteSpace(_gitIgnoreContentInput) && _loadedFileContent == null)">
+            <TablerIcon OutlineIcon="TablerIconOutlineName.Download" /> Import Patterns
+        </button>
+        @if (!string.IsNullOrEmpty(_importStatusMessage))
+        {
+            <div class="alert @(_importSuccess ? "alert-success" : "alert-warning") mt-2" role="alert">
+                @_importStatusMessage
+            </div>
+        }
+    </div>
+</div>
+
+
+@code {
+    private List<string> _ignorePatterns;
+    private string _newPattern = string.Empty;
+    private string _gitIgnoreContentInput = string.Empty;
+    private string _importStatusMessage = string.Empty;
+    private bool _importSuccess;
+    private IBrowserFile _selectedFile;
+    private string _loadedFileContent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPatterns();
+    }
+
+    private async Task LoadPatterns()
+    {
+        _ignorePatterns = await SettingsSvc.GetIgnorePatternsAsync();
+        StateHasChanged();
+    }
+
+    private async Task AddPattern()
+    {
+        if (string.IsNullOrWhiteSpace(_newPattern) || _ignorePatterns.Contains(_newPattern.Trim()))
+        {
+            if (!_ignorePatterns.Contains(_newPattern?.Trim())) return;
+            _importStatusMessage = $"Pattern '{_newPattern?.Trim()}' already exists.";
+            _importSuccess = false;
+            return;
+        }
+        _ignorePatterns.Add(_newPattern.Trim());
+        await SettingsSvc.SaveIgnorePatternsAsync(_ignorePatterns);
+        _newPattern = string.Empty;
+        _importStatusMessage = "Pattern added.";
+        _importSuccess = true;
+        await LoadPatterns();
+    }
+
+    private async Task HandleInputKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddPattern();
+        }
+    }
+
+    private async Task RemovePattern(string pattern)
+    {
+        _ignorePatterns.Remove(pattern);
+        await SettingsSvc.SaveIgnorePatternsAsync(_ignorePatterns);
+        _importStatusMessage = $"Pattern '{pattern}' removed.";
+        _importSuccess = true;
+        await LoadPatterns();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        if (_selectedFile != null)
+        {
+            const long maxFileSize = 1024 * 1024;
+            try
+            {
+                using var streamReader = new StreamReader(_selectedFile.OpenReadStream(maxFileSize));
+                _loadedFileContent = await streamReader.ReadToEndAsync();
+                _gitIgnoreContentInput = _loadedFileContent;
+                _importStatusMessage = $"File '{_selectedFile.Name}' loaded. Ready to import.";
+                _importSuccess = true;
+            }
+            catch (IOException ex)
+            {
+                Logger.LogError(ex, "Error reading file or file too large.");
+                _importStatusMessage = $"Error reading file '{_selectedFile.Name}': {ex.Message}. Max size: {maxFileSize / (1024*1024)}MB";
+                _importSuccess = false;
+                _loadedFileContent = null;
+                _gitIgnoreContentInput = string.Empty;
+            }
+        }
+        else
+        {
+            _loadedFileContent = null;
+        }
+        StateHasChanged();
+    }
+
+    private async Task ImportGitIgnore()
+    {
+        var contentToParse = !string.IsNullOrWhiteSpace(_gitIgnoreContentInput) ? _gitIgnoreContentInput : _loadedFileContent;
+
+        if (string.IsNullOrWhiteSpace(contentToParse))
+        {
+            _importStatusMessage = "No content to import.";
+            _importSuccess = false;
+            return;
+        }
+
+        var lines = contentToParse.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(line => line.Trim())
+                                 .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
+                                 .ToList();
+
+        var newPatternsAdded = 0;
+        var patternsSkipped = 0;
+
+        foreach (var line in lines)
+        {
+            if (!_ignorePatterns.Contains(line))
+            {
+                _ignorePatterns.Add(line);
+                newPatternsAdded++;
+            }
+            else
+            {
+                patternsSkipped++;
+            }
+        }
+
+        if (newPatternsAdded > 0)
+        {
+            await SettingsSvc.SaveIgnorePatternsAsync(_ignorePatterns);
+            _importStatusMessage = $"Import successful. Added {newPatternsAdded} new patterns. Skipped {patternsSkipped} duplicates.";
+            _importSuccess = true;
+        }
+        else if (patternsSkipped > 0 && newPatternsAdded == 0)
+        {
+            _importStatusMessage = $"No new patterns to add. Skipped {patternsSkipped} duplicates.";
+            _importSuccess = false;
+        }
+        else
+        {
+            _importStatusMessage = "No valid patterns found to import.";
+            _importSuccess = false;
+        }
+        
+        _gitIgnoreContentInput = string.Empty;
+        _loadedFileContent = null;
+        _selectedFile = null;
+        await LoadPatterns();
+    }
+}

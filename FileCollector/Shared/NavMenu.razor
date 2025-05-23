@@ -1,9 +1,9 @@
 ﻿<div class="top-row pl-4 navbar navbar-dark">
     <a class="navbar-brand" href="">
         <span class="brand-icon">
-            <TablerIcon OutlineIcon="TablerIconOutlineName.BrandAzure" Size="32px" StrokeWidth="1.5f" />
+            <TablerIcon OutlineIcon="TablerIconOutlineName.File" Size="32px" StrokeWidth="1.5f" />
         </span>
-        <span class="brand-text">Blazor + NativeAOT</span>
+        <span class="brand-text">File Collector</span>
     </a>
     <button class="navbar-toggler" @onclick="ToggleNavMenu" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -19,27 +19,22 @@
             </NavLink>
         </li>
         <li class="nav-item px-3">
-            <NavLink class="nav-link" href="counter" title="Counter">
-                <TablerIcon OutlineIcon="TablerIconOutlineName.Calculator" Size="24px" StrokeWidth="1.5f" />
-                <span class="nav-text">Counter</span>
-            </NavLink>
-        </li>
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="fetchdata" title="Fetch data">
-                <TablerIcon OutlineIcon="TablerIconOutlineName.Database" Size="24px" StrokeWidth="1.5f" />
-                <span class="nav-text">Fetch data</span>
+            <NavLink class="nav-link" href="settings" title="Settings">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.Settings" Size="24px" StrokeWidth="1.5f" />
+                <span class="nav-text">Settings</span>
             </NavLink>
         </li>
     </ul>
 </div>
 
-@code {
-    private bool collapseNavMenu = true;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+@code {
+    private bool _collapseNavMenu = true;
+
+    private string NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
-        collapseNavMenu = !collapseNavMenu;
+        _collapseNavMenu = !_collapseNavMenu;
     }
 }
