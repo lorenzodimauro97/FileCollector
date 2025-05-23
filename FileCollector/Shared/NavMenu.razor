@@ -1,0 +1,45 @@
+﻿<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">
+        <span class="brand-icon">
+            <TablerIcon OutlineIcon="TablerIconOutlineName.BrandAzure" Size="32px" StrokeWidth="1.5f" />
+        </span>
+        <span class="brand-text">Blazor + NativeAOT</span>
+    </a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" title="Home">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.Home" Size="24px" StrokeWidth="1.5f" />
+                <span class="nav-text">Home</span>
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="counter" title="Counter">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.Calculator" Size="24px" StrokeWidth="1.5f" />
+                <span class="nav-text">Counter</span>
+            </NavLink>
+        </li>
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="fetchdata" title="Fetch data">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.Database" Size="24px" StrokeWidth="1.5f" />
+                <span class="nav-text">Fetch data</span>
+            </NavLink>
+        </li>
+    </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

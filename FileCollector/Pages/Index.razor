@@ -1,0 +1,27 @@
+﻿@page "/"
+
+<h3>Tabler Icons Demo</h3>
+
+<h4>Outline Icons</h4>
+<p>
+    <TablerIcon OutlineIcon="TablerIconOutlineName.Home" Size="2rem" Color="dodgerblue" />
+    <TablerIcon OutlineIcon="TablerIconOutlineName.Settings" Class="ms-2" />
+    <TablerIcon OutlineIcon="TablerIconOutlineName.User" Size="24px" Color="var(--bs-success)" Class="ms-2" />
+    <TablerIcon OutlineIcon="TablerIconOutlineName.BrandGithub" Size="3em" Class="ms-2" />
+</p>
+
+<h4>Filled Icons (Requires Tabler CSS/Font support for filled variants)</h4>
+<p>
+    <TablerIcon FilledIcon="TablerIconFilledName.Heart" Size="2rem" Color="red" />
+    <TablerIcon FilledIcon="TablerIconFilledName.Star" Class="ms-2 text-warning" />
+    <TablerIcon FilledIcon="TablerIconFilledName.ThumbUp" Size="24px" Class="ms-2" />
+</p>
+
+<h4>In a Button</h4>
+<button class="btn btn-primary">
+    <TablerIcon OutlineIcon="TablerIconOutlineName.Plus" Class="me-1" /> Add Item
+</button>
+
+<button class="btn btn-danger ms-2">
+    <TablerIcon OutlineIcon="TablerIconOutlineName.Trash" /> Delete
+</button>
