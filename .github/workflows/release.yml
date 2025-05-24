@@ -25,13 +25,13 @@ jobs:
             rid: linux-x64
             asset_name_suffix: linux-x64
             output_executable_name: FileCollector
-          - os: macos-latest # For Intel Macs. For Apple Silicon, use macos-13 (M1) or macos-14 (M2/M3) and osx-arm64 RID.
+          - os: macos-latest
             os_name: macOS (x64)
             rid: osx-x64
             asset_name_suffix: osx-x64
             output_executable_name: FileCollector
           # Optional: Add osx-arm64 for Apple Silicon
-          # - os: macos-14 # or macos-13
+          # - os: macos-14
           #   os_name: macOS (ARM64)
           #   rid: osx-arm64
           #   asset_name_suffix: osx-arm64
@@ -50,8 +50,6 @@ jobs:
         run: dotnet restore FileCollector/FileCollector.csproj
 
       - name: Publish application
-        # The IncludeAllContentForSelfExtract=true in csproj aims for a single-file output with Photino.
-        # SelfContained=true is usually needed for RIDs to bundle runtime.
         run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -o ./publish_output
 
       - name: Archive release artifacts (Windows)
@@ -66,7 +64,7 @@ jobs:
           zip -r ../FileCollector-${{ github.ref_name }}-${{ matrix.asset_name_suffix }}.zip .
           cd ..
 
-      - name: Upload artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: FileCollector-${{ matrix.asset_name_suffix }}
@@ -84,71 +82,42 @@ jobs:
 
       - name: Delete existing release to avoid conflict
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GITHUB_TOKEN is automatically available, gh uses it
-          TAG: ${{ github.ref_name }} # e.g., v1.0.0
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
         run: |
-          echo "Checking for release with tag ${{ env.TAG }}..."
-          # Attempt to view the release. If it exists, gh release view returns 0. If not, it returns non-zero.
-          if gh release view "${{ env.TAG }}" > /dev/null 2>&1; then
-            echo "Release for tag ${{ env.TAG }} found. Deleting it..."
-            gh release delete "${{ env.TAG }}" --yes
-            echo "Existing release for tag ${{ env.TAG }} deleted."
-          else
-            echo "No existing release found for tag ${{ env.TAG }}. Proceeding to create."
-          fi
+          echo "Listing existing releases (if any) for tag ${{ env.TAG }}..."
+          gh release view "${{ env.TAG }}" && (gh release delete "${{ env.TAG }}" --yes && echo "Deleted existing release for tag ${{ env.TAG }}") || echo "No existing release found for tag ${{ env.TAG }}, or an error occurred trying to view/delete it."
+          # The above command attempts to view, and if successful (exit code 0), deletes.
+          # If view fails (release not found), it prints the "No existing release found" message.
+          # This makes the delete attempt conditional on the release existing.
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create Release using GitHub CLI
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }} # Use the clean tag name e.g., v1.0.0
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            Release of FileCollector version ${{ github.ref_name }}.
-            Download the appropriate package for your operating system below.
-          draft: false
-          prerelease: false # Set to true if this is a pre-release
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes "Release of FileCollector version $TAG.
+            Download the appropriate package for your operating system below." \
+            --draft=false \
+            --prerelease=false
+          echo "Release $TAG created."
 
-      - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v1
+      - name: Upload Release Assets using GitHub CLI
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/FileCollector-win-x64/FileCollector-${{ github.ref_name }}-win-x64.zip
-          asset_name: FileCollector-${{ github.ref_name }}-win-x64.zip
-          asset_content_type: application/zip
-
-      - name: Upload Linux Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/FileCollector-linux-x64/FileCollector-${{ github.ref_name }}-linux-x64.zip
-          asset_name: FileCollector-${{ github.ref_name }}-linux-x64.zip
-          asset_content_type: application/zip
-
-      - name: Upload macOS (x64) Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/FileCollector-osx-x64/FileCollector-${{ github.ref_name }}-osx-x64.zip
-          asset_name: FileCollector-${{ github.ref_name }}-osx-x64.zip
-          asset_content_type: application/zip
-
-      # Optional: Upload macOS (ARM64) Release Asset
-      # - name: Upload macOS (ARM64) Release Asset
-      #   if: success() && matrix.os_name == 'macOS (ARM64)' # Adjust condition based on how you download specific artifacts
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: ./artifacts/FileCollector-osx-arm64/FileCollector-${{ github.ref_name }}-osx-arm64.zip
-      #     asset_name: FileCollector-${{ github.ref_name }}-osx-arm64.zip
-      #     asset_content_type: application/zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          echo "Uploading Windows asset..."
+          gh release upload "$TAG" ./artifacts/FileCollector-win-x64/FileCollector-${{ env.TAG }}-win-x64.zip --clobber
+          echo "Uploading Linux asset..."
+          gh release upload "$TAG" ./artifacts/FileCollector-linux-x64/FileCollector-${{ env.TAG }}-linux-x64.zip --clobber
+          echo "Uploading macOS (x64) asset..."
+          gh release upload "$TAG" ./artifacts/FileCollector-osx-x64/FileCollector-${{ env.TAG }}-osx-x64.zip --clobber
+          # Optional: Add osx-arm64 asset upload
+          # if [ -f "./artifacts/FileCollector-osx-arm64/FileCollector-${{ env.TAG }}-osx-arm64.zip" ]; then
+          #   echo "Uploading macOS (ARM64) asset..."
+          #   gh release upload "$TAG" ./artifacts/FileCollector-osx-arm64/FileCollector-${{ env.TAG }}-osx-arm64.zip --clobber
+          # fi
+          echo "All assets uploaded."
