@@ -89,16 +89,10 @@ File Collector is packed with features designed to make your file aggregation pr
 
 ## Screenshots
 
-*(Placeholder: This section is crucial! Add 2-3 clear screenshots of the application in action to give users a visual understanding.)*
+![image](https://github.com/user-attachments/assets/08be055b-5ccc-48c8-8be3-cc8a24be971f)
 
-*   *Example: Main interface showing the file tree, selected files list, and the merged content viewer with syntax highlighting.*
-    ```
-    <!-- ![Main Interface](path/to/your/screenshot_main.png) -->
-    ```
-*   *Example: Settings page showcasing ignore pattern management and prompt configuration.*
-    ```
-    <!-- ![Settings Page](path/to/your/screenshot_settings.png) -->
-    ```
+![image](https://github.com/user-attachments/assets/7e6cb136-f618-44ab-94a8-8eca31050031)
+
 
 ## Getting Started
 
