@@ -1,9 +1,76 @@
-# File: .github/workflows/release.yml
-# ... (on, permissions, build job remain the same) ...
+name: Build and Release FileCollector
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Trigger on version tags like v1.0.0, v1.2.3
+
+permissions:
+  contents: write # Required to create releases, upload assets, and delete existing releases
 
 jobs:
   build:
-    # ... (build job definition remains the same) ...
+    name: Build for ${{ matrix.os_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            os_name: Windows
+            rid: win-x64
+            asset_name_suffix: win-x64
+            output_executable_name: FileCollector.exe
+          - os: ubuntu-latest
+            os_name: Linux
+            rid: linux-x64
+            asset_name_suffix: linux-x64
+            output_executable_name: FileCollector
+          - os: macos-latest # For Intel Macs. For Apple Silicon, use macos-13 (M1) or macos-14 (M2/M3) and osx-arm64 RID.
+            os_name: macOS (x64)
+            rid: osx-x64
+            asset_name_suffix: osx-x64
+            output_executable_name: FileCollector
+          # Optional: Add osx-arm64 for Apple Silicon
+          # - os: macos-14 # or macos-13
+          #   os_name: macOS (ARM64)
+          #   rid: osx-arm64
+          #   asset_name_suffix: osx-arm64
+          #   output_executable_name: FileCollector
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore FileCollector/FileCollector.csproj
+
+      - name: Publish application
+        # The IncludeAllContentForSelfExtract=true in csproj aims for a single-file output with Photino.
+        # SelfContained=true is usually needed for RIDs to bundle runtime.
+        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -o ./publish_output
+
+      - name: Archive release artifacts (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path ./publish_output/* -DestinationPath ./FileCollector-${{ github.ref_name }}-${{ matrix.asset_name_suffix }}.zip
+        shell: pwsh
+
+      - name: Archive release artifacts (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cd ./publish_output
+          zip -r ../FileCollector-${{ github.ref_name }}-${{ matrix.asset_name_suffix }}.zip .
+          cd ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FileCollector-${{ matrix.asset_name_suffix }}
+          path: ./FileCollector-${{ github.ref_name }}-${{ matrix.asset_name_suffix }}.zip
 
   create_release:
     name: Create GitHub Release
@@ -36,7 +103,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }} # Action handles stripping 'refs/tags/' internally
+          tag_name: ${{ github.ref_name }} # Use the clean tag name e.g., v1.0.0
           release_name: Release ${{ github.ref_name }}
           body: |
             Release of FileCollector version ${{ github.ref_name }}.
@@ -44,7 +111,7 @@ jobs:
           draft: false
           prerelease: false # Set to true if this is a pre-release
 
-      - name: Upload Release Assets
+      - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,4 +142,13 @@ jobs:
           asset_content_type: application/zip
 
       # Optional: Upload macOS (ARM64) Release Asset
-      # ...
+      # - name: Upload macOS (ARM64) Release Asset
+      #   if: success() && matrix.os_name == 'macOS (ARM64)' # Adjust condition based on how you download specific artifacts
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: ./artifacts/FileCollector-osx-arm64/FileCollector-${{ github.ref_name }}-osx-arm64.zip
+      #     asset_name: FileCollector-${{ github.ref_name }}-osx-arm64.zip
+      #     asset_content_type: application/zip
