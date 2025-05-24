@@ -6,8 +6,6 @@
 		<ApplicationIcon>favicon.ico</ApplicationIcon>
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
-		<PublishAot>true</PublishAot>
-		<PublishTrimmed>False</PublishTrimmed>
 		<LangVersion>13</LangVersion>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -19,15 +17,11 @@
 	<ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
 		<RdXmlFile Include="rd.xml" />
 		<RdXmlFile Include="Microsoft.AspNetCore.Components.Web.rd.xml" />
-		<IlcArg Include="--nometadatablocking" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Content Update="wwwroot\**">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Update="wwwroot\js\prism-worker.js">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
 
@@ -41,6 +35,7 @@
 	  <PackageReference Include="BlazorTablerIcons" Version="1.0.0" />
 	  <PackageReference Include="DotNet.Glob" Version="3.1.3" />
 	  <PackageReference Include="Photino.Blazor" Version="4.0.13" />
+	  <PackageReference Include="S97SP.Prism.Blazor" Version="1.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -55,5 +50,4 @@
 	  <_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\README.md" />
 	  <_ContentIncludedByDefault Remove="wwwroot\sample-data\weather.json" />
 	</ItemGroup>
-
 </Project>

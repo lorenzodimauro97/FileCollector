@@ -1,11 +1,8 @@
-﻿
-<div class="file-tree-node" style="@($"padding-left: {Level * IndentationSizePx}px;")">
-    <div class="node-content d-flex align-items-center">
+﻿<div class="file-tree-node" style="@($"padding-left: {Level * IndentationSizePx}px;")">
+    <div class="node-content">
         @if (Node.IsDirectory)
         {
-            <span @onclick="ToggleExpand"
-                  class="node-expander"
-                  style="cursor: pointer; width: @(ExpanderWidthPx)px; display: inline-block; text-align:center;">
+            <span @onclick="ToggleExpand" class="node-expander">
                 @if (Node.Children.Any())
                 {
                     <TablerIcon
@@ -14,27 +11,26 @@
                 }
                 else
                 {
-                    <span style="width: 16px; display: inline-block;"></span>
+                    <span class="node-expander-placeholder"></span>
                 }
             </span>
         }
         else
         {
-            <span class="node-expander" style="width: @(ExpanderWidthPx)px; display: inline-block;"></span>
+            <span class="node-expander-placeholder"></span>
         }
-
-        <input type="checkbox" class="form-check-input mx-1" 
+        <input type="checkbox" class="form-check-input node-checkbox"
                checked="@Node.IsSelected"
                @onchange="HandleCheckboxChange"/>
 
         <span @onclick="HandleContentClick"
-              style="@(Node.IsDirectory ? "cursor: pointer;" : "cursor: default;")"
               class="node-label"
               title="@Node.FullPath">
             <TablerIcon OutlineIcon="@IconHelper.GetIconForItem(Node.Name, Node.IsDirectory, Node.IsExpanded)"
-                        Color="@(Node.IsDirectory ? "var(--app-primary-color)" : "var(--sidebar-nav-link-color)")" 
-                        Class="me-1" 
-                        Size="18px"/>
+                        Color="@(Node.IsDirectory ? "var(--app-primary-color)" : "var(--text-color)")"
+                        Class="me-1 node-icon"
+                        Size="18px"
+                        StrokeWidth="1.5f"/>
             @Node.Name
         </span>
     </div>
@@ -58,15 +54,14 @@
     [Parameter] public EventCallback<FileSystemItem> OnSelectionChanged { get; set; }
     [Parameter] public int Level { get; set; }
 
-    private const int IndentationSizePx = 20; // Defines the indent per level
-    private const int ExpanderWidthPx = 20;   // Width for the expander icon area
+    private const int IndentationSizePx = 18;
+    private const int ExpanderWidthPx = 18;
 
     private void ToggleExpand()
     {
         if (Node.IsDirectory)
         {
             Node.IsExpanded = !Node.IsExpanded;
-            // StateHasChanged(); // Usually not needed if Node.IsExpanded is used in the template directly for conditional rendering
         }
     }
 
@@ -74,12 +69,9 @@
     {
         if (e.Value is bool isChecked)
         {
-            // Ensure Node.IsSelected is updated before calling SetSelectionStatus
-            // if SetSelectionStatus relies on the new value of Node.IsSelected internally.
-            // However, SetSelectionStatus takes `isChecked` as an argument, so it's fine.
-            Node.SetSelectionStatus(isChecked, SelectedFilePaths); // This updates Node.IsSelected and children
+            Node.SetSelectionStatus(isChecked, SelectedFilePaths);
             Node.UpdateParentSelectionStatus(SelectedFilePaths);
-            await OnSelectionChanged.InvokeAsync(Node); // Notify parent of the change
+            await OnSelectionChanged.InvokeAsync(Node);
         }
     }
 

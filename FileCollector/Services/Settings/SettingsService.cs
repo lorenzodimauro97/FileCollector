@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,31 +13,30 @@ public class SettingsService
 {
     private readonly string _appSettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 
-    public async Task<List<string>> GetIgnorePatternsAsync()
+    public async Task<AppSettings> GetAppSettingsAsync()
     {
         try
         {
             if (!File.Exists(_appSettingsPath))
             {
                 var defaultConfig = new AppConfiguration();
-
-                await SaveAppSettingsAsync(defaultConfig);
-                return defaultConfig.AppSettings.IgnorePatterns;
+                await SaveConfigAsync(defaultConfig);
+                return defaultConfig.AppSettings;
             }
 
             var json = await File.ReadAllTextAsync(_appSettingsPath);
-
             var config = JsonSerializer.Deserialize(json, AppJsonSerializerContext.Default.AppConfiguration);
-            return config?.AppSettings.IgnorePatterns ?? [];
+            return config?.AppSettings ?? new AppSettings();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading settings: {ex.Message}");
-            return [];
+
+            return new AppSettings();
         }
     }
 
-    public async Task SaveIgnorePatternsAsync(List<string> patterns)
+    public async Task SaveAppSettingsAsync(AppSettings settings)
     {
         AppConfiguration config;
         if (File.Exists(_appSettingsPath))
@@ -44,12 +44,11 @@ public class SettingsService
             try
             {
                 var json = await File.ReadAllTextAsync(_appSettingsPath);
-
                 config = JsonSerializer.Deserialize(json, AppJsonSerializerContext.Default.AppConfiguration) ?? new AppConfiguration();
             }
             catch (JsonException)
             {
-                Console.WriteLine("appsettings.json was malformed. Creating a new one.");
+                Console.WriteLine("appsettings.json was malformed. Creating a new one for saving.");
                 config = new AppConfiguration();
             }
         }
@@ -58,15 +57,17 @@ public class SettingsService
             config = new AppConfiguration();
         }
             
-        config.AppSettings.IgnorePatterns = patterns.Distinct().ToList();
-        await SaveAppSettingsAsync(config);
+        config.AppSettings = settings;
+        config.AppSettings.IgnorePatterns = settings.IgnorePatterns.Distinct().ToList();
+
+
+        await SaveConfigAsync(config);
     }
 
-    private async Task SaveAppSettingsAsync(AppConfiguration config)
+    private async Task SaveConfigAsync(AppConfiguration config)
     {
         try
         {
-
             var newJson = JsonSerializer.Serialize(config, AppJsonSerializerContext.Default.AppConfiguration);
             await File.WriteAllTextAsync(_appSettingsPath, newJson);
         }
@@ -74,5 +75,18 @@ public class SettingsService
         {
             Console.WriteLine($"Error saving settings: {ex.Message}");
         }
+    }
+
+    public async Task<List<string>> GetIgnorePatternsAsync()
+    {
+        var settings = await GetAppSettingsAsync();
+        return settings.IgnorePatterns;
+    }
+
+    public async Task SaveIgnorePatternsAsync(List<string> patterns)
+    {
+        var settings = await GetAppSettingsAsync();
+        settings.IgnorePatterns = patterns;
+        await SaveAppSettingsAsync(settings);
     }
 }

@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-
+using System.Linq;
 
 namespace FileCollector.Services.Settings;
 
 public class IoService
 {
-    public static IEnumerable<string> GetFileSystemEntriesRecursive(
+    public IEnumerable<string> GetFileSystemEntriesRecursive(
         string directoryPath,
         string searchPattern = "*",
         bool ignoreInaccessible = true)
@@ -17,10 +17,11 @@ public class IoService
             throw new ArgumentNullException(nameof(directoryPath));
         }
 
-
         if (!Directory.Exists(directoryPath))
         {
-            return ignoreInaccessible ? [] : throw new DirectoryNotFoundException($"Directory not found: {directoryPath}");
+            return ignoreInaccessible
+                ? []
+                : throw new DirectoryNotFoundException($"Directory not found: {directoryPath}");
         }
 
         var enumerationOptions = new EnumerationOptions
