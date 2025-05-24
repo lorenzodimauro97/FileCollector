@@ -198,9 +198,8 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
         {
             @if (_mergedFilesToDisplay.Any())
             {
-                @foreach (var fileItem in _mergedFilesToDisplay)
-                {
-                    <div class="file-block @(fileItem.ErrorMessage != null ? "error-block" : "")">
+                <Virtualize Items="@_mergedFilesToDisplay" Context="fileItem">
+                    <div @key="fileItem.FilePath" class="file-block @(fileItem.ErrorMessage != null ? "error-block" : "")">
                         <p class="file-header">
                             // File: @fileItem.RelativePath @(fileItem.ErrorMessage != null ? "(Error)" : "")
                         </p>
@@ -223,7 +222,7 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
                             // End of file: @fileItem.RelativePath
                         </p>
                     </div>
-                }
+                </Virtualize>
             }
             else if (!_isMergingContent && selectedActualFilesCount > 0)
             {
