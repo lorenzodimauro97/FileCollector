@@ -41,7 +41,7 @@ internal class Program
         mainWindowInstance = app.MainWindow;
 
         app.MainWindow
-            .SetIconFile("favicon.ico")
+            .SetIconFile("icon.ico")
             .SetTitle("File Collector")
             .SetLogVerbosity(0);
 

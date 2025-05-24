@@ -127,7 +127,7 @@
             return "none"; // Prism might treat 'none' as plain text or fallback.
                            // Or use a very generic alias like 'clike' or 'markup' if that's better.
         }
-        var alias = langClass.Substring("language-".Length);
+        var alias = langClass["language-".Length..];
         // Handle specific aliases if Prism uses different names than CSS classes
         // e.g., if language-markup is for cshtml, Prism might expect 'cshtml'
         if (alias == "markup" && Block.FilePath.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)) return "cshtml";
