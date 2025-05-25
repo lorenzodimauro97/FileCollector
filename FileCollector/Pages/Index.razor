@@ -276,7 +276,7 @@
                             }
                             else if (fileItem.FilePath == "SYSTEM_PRE_PROMPT" || fileItem.FilePath == "SYSTEM_POST_PROMPT" || fileItem.FilePath == "SYSTEM_USER_PROMPT")
                             {
-                                <pre class="file-content-system-prompt"><code>@fileItem.Content</code></pre>
+                                <MarkdownRenderer MarkdownContent="@fileItem.Content" UseHardLineBreaks="true" />
                             }
                             else
                             {
@@ -336,7 +336,7 @@
     private string _newContextName = "";
     private string? _selectedContextToLoadId;
     private string _contextStatusMessage = "";
-    private bool _contextStatusIsError = false;
+    private bool _contextStatusIsError;
 
     protected override async Task OnInitializedAsync()
     {
