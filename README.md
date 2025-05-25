@@ -89,10 +89,11 @@ File Collector is packed with features designed to make your file aggregation pr
 
 ## Screenshots
 
-![image](https://github.com/user-attachments/assets/08be055b-5ccc-48c8-8be3-cc8a24be971f)
+![image](https://github.com/user-attachments/assets/5cc6ad3f-dcf9-467e-8f71-6dcb52f4a354)
 
-![image](https://github.com/user-attachments/assets/7e6cb136-f618-44ab-94a8-8eca31050031)
+![image](https://github.com/user-attachments/assets/0e2b7176-8beb-4b59-9544-f81b54fcc304)
 
+![image](https://github.com/user-attachments/assets/8f68bbfc-0b12-40ca-b1e5-ba6208b0da7d)
 
 ## Getting Started
 
