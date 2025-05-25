@@ -1,3 +1,10 @@
+name: Build and Release FileCollector
+
+on:
+  push:
+    branches:
+      - master
+
 jobs:
   build:
     name: Build for ${{ matrix.os-name }}
