@@ -119,7 +119,7 @@ public class UpdateService
             }
 
             LargeVersion? currentVersion;
-            System.Version? systemVersion = Assembly.GetEntryAssembly()?.GetName().Version;
+            var systemVersion = Assembly.GetEntryAssembly()?.GetName().Version;
             if (systemVersion != null)
             {
                 currentVersion = LargeVersion.FromSystemVersion(systemVersion);
@@ -173,7 +173,7 @@ public class UpdateService
                 _logger.LogInformation("New version available: {LatestVersion}. Asset found: {AssetName}",
                     latestVersion.ToString(), asset.Name);
                 _updateStateService.SetState(UpdateProcessState.UpdateAvailable,
-                    $"New version {latestVersion.ToString()} ({asset.Name}) for your platform is available.",
+                    $"New version {latestVersion} ({asset.Name}) for your platform is available.",
                     latestRelease);
             }
             else
@@ -234,9 +234,9 @@ public class UpdateService
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
             long bytesRead = 0;
 
-            using (var contentStream = await response.Content.ReadAsStreamAsync())
-            using (var fileStream = new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None,
-                       8192, true))
+            await using (var contentStream = await response.Content.ReadAsStreamAsync())
+            await using (var fileStream = new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None,
+                             8192, true))
             {
                 var buffer = new byte[8192];
                 int bytesReadFromStream;
@@ -326,26 +326,38 @@ public class UpdateService
                         updaterTempPath);
                 }
 
-                var processStartInfo = new ProcessStartInfo
-                {
-                    FileName = updaterTempPath,
-                    Arguments =
-                        $"\"{AppContext.BaseDirectory}\" \"{extractionPath}\" \"{Path.GetFileName(Process.GetCurrentProcess().MainModule?.FileName)}\" \"{appSettingsBackupPath}\"",
-                    WorkingDirectory = tempUpdateDir
-                };
+                string? mainModuleFileName = Process.GetCurrentProcess().MainModule?.FileName;
+                string mainAppExeNameToPass;
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (string.IsNullOrEmpty(mainModuleFileName))
                 {
-                    processStartInfo.UseShellExecute = true;
+                    _logger.LogError("Could not determine main module file name for the current process. Updater might not be able to restart the main application. Using fallback 'FileCollector.exe'.");
+                    mainAppExeNameToPass = "FileCollector.exe"; 
                 }
                 else
                 {
-                    processStartInfo.UseShellExecute = false;
+                    mainAppExeNameToPass = Path.GetFileName(mainModuleFileName);
                 }
+                
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = updaterTempPath,
+                    WorkingDirectory = tempUpdateDir,
+                    UseShellExecute = false 
+                };
 
-                _logger.LogInformation("Launching updater: {FileName} {Arguments}", processStartInfo.FileName,
-                    processStartInfo.Arguments);
+                processStartInfo.ArgumentList.Add(AppContext.BaseDirectory);
+                processStartInfo.ArgumentList.Add(extractionPath);
+                processStartInfo.ArgumentList.Add(mainAppExeNameToPass);
+                processStartInfo.ArgumentList.Add(appSettingsBackupPath);
+                
+                _logger.LogInformation("Launching updater: {FileName} with {ArgCount} arguments.", processStartInfo.FileName, processStartInfo.ArgumentList.Count);
+                for(int i = 0; i < processStartInfo.ArgumentList.Count; i++)
+                {
+                    _logger.LogInformation("Arg[{Index}]: {ArgumentValue}", i, processStartInfo.ArgumentList[i]);
+                }
                 _logger.LogInformation("Updater UseShellExecute: {UseShellExecute}", processStartInfo.UseShellExecute);
+
                 Process.Start(processStartInfo);
                 _updateStateService.SetState(UpdateProcessState.Applying,
                     "Updater launched. Application will now close.");
@@ -371,8 +383,9 @@ public class UpdateService
                 {
                     Directory.Delete(tempUpdateDir, true);
                 }
-                catch
+                catch (Exception deleteEx)
                 {
+                    _logger.LogWarning(deleteEx, "Failed to clean up temporary update directory: {TempUpdateDir}", tempUpdateDir);
                 }
             }
         }
