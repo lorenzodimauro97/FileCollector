@@ -41,7 +41,17 @@ jobs:
         run: dotnet restore FileCollector/FileCollector.csproj
 
       - name: Publish application
-        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=true /p:DebugType=None -o ./publish_output
+        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=true /p:DebugType=portable /p:PublishTrimmed=false -o ./publish_output
+
+      - name: List publish_output contents (Diagnostics)
+        if: runner.os == 'Windows'
+        run: Get-ChildItem -Path ./publish_output -Recurse | Select-Object FullName, Length, Mode, LastWriteTime
+        shell: pwsh
+      
+      - name: List publish_output contents (Diagnostics)
+        if: runner.os != 'Windows'
+        run: ls -lR ./publish_output
+        shell: bash
 
       - name: Archive output (Windows)
         if: matrix.os == 'windows-latest'
@@ -76,7 +86,7 @@ jobs:
         # Each artifact will be in a subdirectory named after the artifact.
 
       - name: List downloaded files (for verification)
-        run: ls -R
+        run: ls -R .
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
