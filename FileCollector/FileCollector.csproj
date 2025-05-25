@@ -38,6 +38,11 @@
 		<PackageReference Include="BlazorTablerIcons" Version="1.0.0" />
 		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
 		<PackageReference Include="S97SP.Prism.Blazor" Version="1.0.0" />
+		<PackageReference Include="Serilog" Version="4.3.0" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+		<PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
