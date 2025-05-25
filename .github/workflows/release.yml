@@ -1,8 +1,5 @@
 name: Build and Release FileCollector
 
-env:
-  MAJOR_MINOR_VERSION: "1.0" # Define base major.minor version
-
 on:
   push:
     branches:
@@ -40,12 +37,19 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Determine Application Version
-        id: versioner
+      - name: Determine Application Version Components
+        id: version_components
         run: |
-          $AppVersion = "${{ env.MAJOR_MINOR_VERSION }}.${{ github.run_number }}.${{ github.run_attempt }}"
-          echo "Determined application version: $AppVersion"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "app_version=$AppVersion"
+          [xml]$PropsDocument = Get-Content -Path ./Directory.Build.props
+          $Major = $PropsDocument.Project.PropertyGroup.MyProductVersionMajor.InnerText
+          $Minor = $PropsDocument.Project.PropertyGroup.MyProductVersionMinor.InnerText
+          $Patch = "${{ github.run_number }}"
+          $Revision = "${{ github.run_attempt }}"
+          $AppVersion = "$Major.$Minor.$Patch.$Revision"
+          echo "Full application version: $AppVersion"
+          echo "app_version=$AppVersion" >> $env:GITHUB_OUTPUT
+          echo "patch_version=$Patch" >> $env:GITHUB_OUTPUT
+          echo "revision_version=$Revision" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
       - name: Restore dependencies
@@ -53,9 +57,9 @@ jobs:
 
       - name: Publish application
         run: |
-          echo "Publishing application version: ${{ steps.versioner.outputs.app_version }}"
-          dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=false /p:DebugType=None /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:Version=${{ steps.versioner.outputs.app_version }} /p:InformationalVersion=${{ steps.versioner.outputs.app_version }} -o ./publish_output
-        shell: pwsh # Explicitly use pwsh for consistency, especially with multi-line scripts
+          echo "Publishing application with version components: Major.Minor (from props), Patch=${{ steps.version_components.outputs.patch_version }}, Revision=${{ steps.version_components.outputs.revision_version }}"
+          dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=false /p:DebugType=None /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:MyProductVersionPatch=${{ steps.version_components.outputs.patch_version }} /p:MyProductVersionRevision=${{ steps.version_components.outputs.revision_version }} -o ./publish_output
+        shell: pwsh
 
       - name: List publish_output contents (Diagnostics)
         if: runner.os == 'Windows'
@@ -75,7 +79,7 @@ jobs:
       - name: Archive output (macOS/Linux)
         if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
         run: tar -czvf ./${{ matrix.output-archive-name }} -C ./publish_output .
-        shell: bash # tar is a bash command
+        shell: bash
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -85,29 +89,42 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest # This job uses bash by default
+    runs-on: ubuntu-latest
     needs: build
     permissions:
       contents: write
 
     steps:
+      - name: Checkout code # Needed to read Directory.Build.props
+        uses: actions/checkout@v4
+
       - name: Generate Release Info
         id: release_info
         run: |
-          APP_VERSION="${{ env.MAJOR_MINOR_VERSION }}.${{ github.run_number }}.${{ github.run_attempt }}"
-          echo "tag_name=v${APP_VERSION}" >> $GITHUB_OUTPUT
-          echo "app_version_for_display=${APP_VERSION}" >> $GITHUB_OUTPUT
-          echo "release_name=Release v${APP_VERSION}" >> $GITHUB_OUTPUT
-        # shell: bash # Default on ubuntu-latest
+          # Using Python for robust XML parsing in bash environment
+          # Ensure Python is available on the runner (ubuntu-latest usually has it)
+          VERSION_INFO=$(python -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('./Directory.Build.props')
+          root = tree.getroot()
+          major = root.find('.//MyProductVersionMajor').text
+          minor = root.find('.//MyProductVersionMinor').text
+          patch = '${{ github.run_number }}'
+          revision = '${{ github.run_attempt }}'
+          app_version = f'{major}.{minor}.{patch}.{revision}'
+          print(f'tag_name=v{app_version}')
+          print(f'app_version_for_display={app_version}')
+          print(f'release_name=Release v{app_version}')
+          ")
+          echo "$VERSION_INFO" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
-        # No 'name' is specified, so all artifacts from this workflow run are downloaded.
-        # Each artifact will be in a subdirectory named after the artifact.
 
       - name: List downloaded files (for verification)
         run: ls -R .
-        # shell: bash # Default on ubuntu-latest
+        shell: bash
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

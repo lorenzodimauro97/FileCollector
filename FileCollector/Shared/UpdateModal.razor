@@ -101,7 +101,7 @@
         _currentAppVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "N/A";
         UpdateModalVisibility(); // Initial check
 
-        var appSettings = await UpdateSvc._settingsService.GetAppSettingsAsync();
+        var appSettings = await UpdateSvc.SettingsService.GetAppSettingsAsync();
         if (appSettings.Update.CheckForUpdatesOnStartup)
         {
             _ = UpdateSvc.CheckForUpdatesAsync();

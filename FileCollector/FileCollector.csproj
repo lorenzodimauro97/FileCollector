@@ -8,9 +8,7 @@
 		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
 		<LangVersion>13</LangVersion>
 		<Nullable>enable</Nullable>
-		<Version>1.0.0</Version>
-		<InformationalVersion>1.0.0</InformationalVersion>
-		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+		<!-- Version properties are now inherited from Directory.Build.props -->
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -54,48 +52,58 @@
 		<ProjectReference Include="..\FileCollector.Updater\FileCollector.Updater.csproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly> <!-- We are not linking to it as a library -->
 			<SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties> <!-- Avoids issues for SDK-style projects -->
+			<Publish>false</Publish> <!-- Prevent main project from trying to publish the updater -->
+			<PrivateAssets>all</PrivateAssets> <!-- Further prevent assets from flowing to the main project's publish -->
 		</ProjectReference>
 	</ItemGroup>
 
 	<!-- Custom target to publish and copy updater files -->
-	<Target Name="PublishAndCopyUpdaterFiles" AfterTargets="Build">
+	<Target Name="PublishAndCopyUpdaterFiles" AfterTargets="Publish">
 		<PropertyGroup>
 			<_UpdaterProjectFullPath>$(MSBuildProjectDirectory)\..\FileCollector.Updater\FileCollector.Updater.csproj</_UpdaterProjectFullPath>
-			<!-- Define an intermediate directory for the updater's publish output -->
-			<_UpdaterIntermediatePublishDir>$(BaseIntermediateOutputPath)updater_publish\$([System.Guid]::NewGuid())</_UpdaterIntermediatePublishDir>
-			<!-- $(BaseIntermediateOutputPath) is typically obj/$(Configuration)/$(TargetFramework)/ -->
+			<_UpdaterIntermediatePublishDirBaseName>updater_publish_temp</_UpdaterIntermediatePublishDirBaseName>
+			<_UpdaterIntermediatePublishDir>$(BaseIntermediateOutputPath)$(_UpdaterIntermediatePublishDirBaseName)\$([System.Guid]::NewGuid())</_UpdaterIntermediatePublishDir>
+			<_PathToCopyFrom>$(_UpdaterIntermediatePublishDir)</_PathToCopyFrom>
 		</PropertyGroup>
 
-		<Message Text="Publishing FileCollector.Updater to intermediate location: $(_UpdaterIntermediatePublishDir) with Version: $(Version)" Importance="high" />
-		<!-- Use MSBuild task to publish the updater project -->
-		<MSBuild Projects="$(_UpdaterProjectFullPath)"
-				 Targets="Publish"
-				 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);PublishDir=$(_UpdaterIntermediatePublishDir);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=false;Version=$(Version);InformationalVersion=$(InformationalVersion);AssemblyVersion=$(AssemblyVersion);FileVersion=$(FileVersion)" />
-		<!-- SelfContained=false for updater, assuming .NET 9 runtime is available via main app -->
-		<!-- Pass RuntimeIdentifier from main app's build/publish process -->
-		<!-- Pass Version properties from main app's build/publish process -->
+		<!-- Clean and ensure the intermediate directory exists -->
+		<RemoveDir Directories="$(_PathToCopyFrom)" Condition="Exists('$(_PathToCopyFrom)')" />
+		<MakeDir Directories="$(_PathToCopyFrom)" />
+
+		<Message Text="Publishing FileCollector.Updater using dotnet publish to: $(_PathToCopyFrom) for final publish step" Importance="high" />
+		<Exec Command='dotnet publish "$(_UpdaterProjectFullPath)" -c $(Configuration) -f $(TargetFramework) -r $(RuntimeIdentifier) -o "$(_PathToCopyFrom)" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=True -p:TrimMode=Link /p:DebugType=None /p:Version=$(Version) /p:InformationalVersion=$(InformationalVersion) /p:AssemblyVersion=$(AssemblyVersion) /p:FileVersion=$(FileVersion)' />
+
+		<!-- Diagnostic: List files in the intermediate directory -->
+		<Message Text="Listing files in intermediate updater publish directory (AfterTargets=Publish): $(_PathToCopyFrom)" Importance="high" />
+		<ItemGroup>
+			<_IntermediateUpdaterFiles Include="$(_PathToCopyFrom)\**\*.*" />
+		</ItemGroup>
+		<Message Text="File: %(_IntermediateUpdaterFiles.FullPath)" Importance="high" />
+		<!-- End Diagnostic -->
 
 		<ItemGroup>
 			<!-- Collect all files from the updater's intermediate publish directory -->
-			<_UpdaterFilesToCopy Include="$(_UpdaterIntermediatePublishDir)\**\*.*" />
+			<_UpdaterFilesToCopy Include="@(_IntermediateUpdaterFiles)" />
 		</ItemGroup>
 
-		<Message Text="Copying FileCollector.Updater files to build output: $(OutputPath)" Importance="high" />
-		<!-- Copy to main project's build output directory (e.g., bin/Release/net9.0/) -->
+		<Message Text="Number of updater files to copy (AfterTargets=Publish): @(_UpdaterFilesToCopy->Count())" Importance="high" />
+
+		<!-- This copy to $(OutputPath) might be redundant if AfterTargets=Publish, but harmless.
+		     The main goal is to ensure $(PublishDir) is correct. -->
+		<Message Text="Copying FileCollector.Updater files to build output (AfterTargets=Publish): $(OutputPath)" Importance="high" Condition="'@(_UpdaterFilesToCopy->Count())' > '0'" />
 		<Copy SourceFiles="@(_UpdaterFilesToCopy)"
 			  DestinationFolder="$(OutputPath)\%(RecursiveDir)"
-			  SkipUnchangedFiles="true" />
+			  SkipUnchangedFiles="true"
+			  Condition="'@(_UpdaterFilesToCopy->Count())' > '0'"/>
 
-		<!-- Conditionally copy to main project's publish directory (e.g., bin/Release/net9.0/publish/) -->
-		<Message Text="Copying FileCollector.Updater files to publish output: $(PublishDir)" Importance="high" Condition=" '$(PublishDir)' != '' And '$(PublishDir)' != '$(OutputPath)' " />
+		<Message Text="Copying FileCollector.Updater files to FINAL publish output (AfterTargets=Publish): $(PublishDir)" Importance="high" Condition=" '$(PublishDir)' != '' And '@(_UpdaterFilesToCopy->Count())' > '0'" />
 		<Copy SourceFiles="@(_UpdaterFilesToCopy)"
 			  DestinationFolder="$(PublishDir)\%(RecursiveDir)"
-			  SkipUnchangedFiles="true"
-			  Condition=" '$(PublishDir)' != '' And '$(PublishDir)' != '$(OutputPath)' " />
-		<!-- The condition '$(PublishDir)' != '$(OutputPath)' avoids redundant copy if paths are the same -->
+			  SkipUnchangedFiles="false"
+			  OverwriteReadOnlyFiles="true"
+			  Condition=" '$(PublishDir)' != '' And '@(_UpdaterFilesToCopy->Count())' > '0'" />
 
-		<!-- Clean up the intermediate updater publish directory -->
-		<RemoveDir Directories="$(_UpdaterIntermediatePublishDir)" Condition="Exists('$(_UpdaterIntermediatePublishDir)')" />
+		<RemoveDir Directories="$(_PathToCopyFrom)" Condition="Exists('$(_PathToCopyFrom)')" />
 	</Target>
 
 </Project>

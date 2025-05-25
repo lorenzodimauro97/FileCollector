@@ -20,7 +20,7 @@ namespace FileCollector.Services;
 public class UpdateService
 {
     private readonly ILogger<UpdateService> _logger;
-    public readonly SettingsService _settingsService;
+    public readonly SettingsService SettingsService;
     private readonly HttpClient _httpClient;
     private readonly UpdateStateService _updateStateService;
     private readonly Func<PhotinoWindow> _photinoWindowFactory;
@@ -36,7 +36,7 @@ public class UpdateService
         Func<PhotinoWindow> photinoWindowFactory)
     {
         _logger = logger;
-        _settingsService = settingsService;
+        SettingsService = settingsService;
         _httpClient = httpClient;
         _updateStateService = updateStateService;
         _photinoWindowFactory = photinoWindowFactory;
@@ -94,7 +94,7 @@ public class UpdateService
 
         try
         {
-            var appSettings = await _settingsService.GetAppSettingsAsync();
+            var appSettings = await SettingsService.GetAppSettingsAsync();
             if (string.IsNullOrWhiteSpace(appSettings.Update.GitHubRepoOwner) ||
                 string.IsNullOrWhiteSpace(appSettings.Update.GitHubRepoName))
             {
@@ -190,7 +190,7 @@ public class UpdateService
             return;
         }
 
-        var appSettings = await _settingsService.GetAppSettingsAsync();
+        var appSettings = await SettingsService.GetAppSettingsAsync();
         string expectedAssetName = GetPlatformSpecificAssetFileName();
         var asset = _updateStateService.AvailableUpdateInfo.Assets.FirstOrDefault(a => a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
 

@@ -1,0 +1,22 @@
+﻿<Project>
+  <PropertyGroup>
+    <!-- Define base Major and Minor version components here -->
+    <MyProductVersionMajor>1</MyProductVersionMajor>
+    <MyProductVersionMinor>0</MyProductVersionMinor>
+
+    <!-- Patch and Revision will be supplied by CI or default to 0 for local builds -->
+    <MyProductVersionPatch Condition="'$(MyProductVersionPatch)' == ''">0</MyProductVersionPatch>
+    <MyProductVersionRevision Condition="'$(MyProductVersionRevision)' == ''">0</MyProductVersionRevision>
+
+    <!-- Construct the full 4-part version -->
+    <GeneratedVersion>$(MyProductVersionMajor).$(MyProductVersionMinor).$(MyProductVersionPatch).$(MyProductVersionRevision)</GeneratedVersion>
+
+    <!-- Standard .NET version properties derived from GeneratedVersion -->
+    <Version>$(GeneratedVersion)</Version>
+    <AssemblyVersion>$(GeneratedVersion)</AssemblyVersion>
+    <FileVersion>$(GeneratedVersion)</FileVersion>
+    <InformationalVersion>$(GeneratedVersion)</InformationalVersion>
+    <!-- ApplicationDisplayVersion can be shorter, e.g., 3-part -->
+    <ApplicationDisplayVersion>$(MyProductVersionMajor).$(MyProductVersionMinor).$(MyProductVersionPatch)</ApplicationDisplayVersion>
+  </PropertyGroup>
+</Project>

@@ -6,14 +6,23 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <ApplicationIcon Condition="Exists('updater_icon.ico')">updater_icon.ico</ApplicationIcon>
-        <Version>1.0.0</Version>
+        <!-- Version property is now inherited from Directory.Build.props 
+             or overridden during publish by FileCollector.csproj -->
         <AssemblyName>FileCollector.Updater</AssemblyName>
+
+        <!-- Settings for single-file executable -->
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>true</SelfContained> <!-- It will use the runtime from the main app -->
+        <PublishTrimmed>true</PublishTrimmed>
+        <!-- <TrimMode>link</TrimMode> --> <!-- Default is link for .NET 6+ when PublishTrimmed is true -->
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>None</DebugType>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <PackageReference Include="Serilog" Version="4.3.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     </ItemGroup>
-    
+
 </Project>
