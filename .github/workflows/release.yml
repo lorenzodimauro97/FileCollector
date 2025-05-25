@@ -67,3 +67,40 @@ jobs:
         with:
           name: FileCollector-${{ matrix.artifact-name-suffix }}
           path: ./${{ matrix.output-archive-name }}
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - name: Generate tag name
+        id: tagger
+        run: echo "tag_name=v${{ github.run_id }}.${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        # No 'name' is specified, so all artifacts from this workflow run are downloaded.
+        # Each artifact will be in a subdirectory named after the artifact.
+
+      - name: List downloaded files (for verification)
+        run: ls -R .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tagger.outputs.tag_name }}
+          name: Release ${{ steps.tagger.outputs.tag_name }}
+          body: |
+            Automated release for commit ${{ github.sha }}.
+            Builds for Windows, macOS, and Linux are attached.
+          draft: false
+          prerelease: false
+          files: |
+            ./FileCollector-win-x64/FileCollector-win-x64.zip
+            ./FileCollector-osx-x64/FileCollector-osx-x64.tar.gz
+            ./FileCollector-linux-x64/FileCollector-linux-x64.tar.gz
