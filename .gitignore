@@ -1,5 +1,69 @@
-bin/
-obj/
-/packages/
-riderModule.iml
-/_ReSharper.Caches/
+# Visual Studio / Rider
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Bb]in/
+[Oo]bj/
+publish/
+publish_final/
+release/
+releases/
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+[Pp]ackages/
+*~*.cs
+
+# Rider
+/.idea
+*.iml
+
+# User-specific files
+*.csproj.user
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+# Log files
+*.log
+*.log.*
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Photino / Native build artifacts (if any outside bin/obj, though usually covered)
+*.pdb
+*.exe
+*.dll
+*.dylib
+*.so
+
+# node.js (if you ever use npm/yarn for anything)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock

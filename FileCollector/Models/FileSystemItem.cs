@@ -11,7 +11,7 @@ namespace FileCollector.Models
         public bool IsDirectory { get; set; }
         public bool IsSelected { get; set; }
         public bool IsExpanded { get; set; }
-        private FileSystemItem? Parent { get; set; }
+        public FileSystemItem? Parent { get; set; }
         public List<FileSystemItem> Children { get; set; } = [];
 
         public FileSystemItem(string fullPath, bool isDirectory, FileSystemItem? parent = null)

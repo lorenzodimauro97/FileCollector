@@ -30,11 +30,11 @@ public class FileTreeService(
     public async Task<FileTreeLoadResult> LoadTreeAsync(
         string currentProcessingPath,
         List<string> exclusions,
-        Action<string> reportProgress)
+        Func<string, Task> reportProgress)
     {
         try
         {
-            reportProgress($"Accessing folder: {currentProcessingPath.Shorten(100)}...");
+            await reportProgress($"Accessing folder: {currentProcessingPath.Shorten(100)}...");
 
             if (!await Task.Run(() => Directory.Exists(currentProcessingPath)))
             {
@@ -46,7 +46,7 @@ public class FileTreeService(
                 };
             }
 
-            reportProgress($"Scanning file system entries in {currentProcessingPath.Shorten(100)}...");
+            await reportProgress($"Scanning file system entries in {currentProcessingPath.Shorten(100)}...");
             List<string> allEntries;
             try
             {
@@ -69,27 +69,27 @@ public class FileTreeService(
                     { Message = $"Error enumerating files: {ex.Message.Shorten(100)}", IsError = true };
             }
 
-            if (!allEntries.Any())
+            if (allEntries.Count == 0)
             {
                 _logger.LogInformation("No files or directories found in {Path}", currentProcessingPath);
                 return new FileTreeLoadResult { Message = "No files or directories found in the selected folder." };
             }
 
-            reportProgress($"Filtering {allEntries.Count:N0} entries...");
+            await reportProgress($"Filtering {allEntries.Count:N0} entries...");
             var filteredFullPaths =
                 await Task.Run(() => _gitIgnoreFilterService.FilterPaths(allEntries, exclusions).ToList());
 
-            if (!filteredFullPaths.Any())
+            if (filteredFullPaths.Count == 0)
             {
                 _logger.LogInformation("No items remain after filtering in {Path}", currentProcessingPath);
                 return new FileTreeLoadResult { Message = "No items remain after filtering." };
             }
 
-            reportProgress($"Building tree from {filteredFullPaths.Count:N0} paths...");
+            await reportProgress($"Building tree from {filteredFullPaths.Count:N0} paths...");
             var newTrueRootItems = await Task.Run(() => PathConverterService.BuildTree(filteredFullPaths));
 
-            string message = "";
-            List<FileSystemItem> newDisplayRootItems = [];
+            var message = "";
+            List<FileSystemItem> newDisplayRootItems;
             var displayRootNode = newTrueRootItems.FirstOrDefault(item =>
                 string.Equals(item.FullPath, currentProcessingPath, StringComparison.OrdinalIgnoreCase));
 
@@ -108,7 +108,7 @@ public class FileTreeService(
             }
             else
             {
-                var allTrueRootsAreDirectChildren = newTrueRootItems.Any() && newTrueRootItems.All(item =>
+                var allTrueRootsAreDirectChildren = newTrueRootItems.Count != 0 && newTrueRootItems.All(item =>
                     Path.GetDirectoryName(item.FullPath)
                         ?.Equals(
                             currentProcessingPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
@@ -127,14 +127,14 @@ public class FileTreeService(
                 }
             }
 
-            if (string.IsNullOrEmpty(message) && !newDisplayRootItems.Any() && newTrueRootItems.Any())
+            if (string.IsNullOrEmpty(message) && newDisplayRootItems.Count == 0 && newTrueRootItems.Count != 0)
             {
                 message =
                     "Selected folder has content, but none to display at the root level after processing (e.g., all are children of a filtered-out subfolder).";
                 _logger.LogInformation("{MessageContent} Path: {Path}", message, currentProcessingPath);
             }
-            else if (string.IsNullOrEmpty(message) && !newDisplayRootItems.Any() && !newTrueRootItems.Any() &&
-                     filteredFullPaths.Any())
+            else if (string.IsNullOrEmpty(message) && newDisplayRootItems.Count == 0 && newTrueRootItems.Count == 0 &&
+                     filteredFullPaths.Count != 0)
             {
                 message = "Items were found and filtered, but tree construction resulted in no displayable items.";
                 _logger.LogWarning("{MessageContent} Path: {Path}", message, currentProcessingPath);

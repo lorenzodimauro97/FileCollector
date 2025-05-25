@@ -350,11 +350,13 @@ app {
 
 .scrollable-area, .scrollable-area-sm {
     overflow-y: auto;
+    overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
 }
 .scrollable-area::-webkit-scrollbar, .scrollable-area-sm::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
 }
 .scrollable-area::-webkit-scrollbar-track, .scrollable-area-sm::-webkit-scrollbar-track {
     background: var(--scrollbar-track-bg);
@@ -487,6 +489,7 @@ app {
     padding: 2px 0;
     cursor: default;
     border-radius: var(--mantine-radius-xs);
+    min-width: fit-content; /* Ensure content determines min-width for scrolling */
 }
 .file-tree-node .node-content:hover {
     background-color: var(--app-bg-color);

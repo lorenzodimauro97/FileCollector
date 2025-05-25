@@ -12,240 +12,307 @@
 <PageTitle>File Collector</PageTitle>
 
 <div class="page-layout">
-<div class="left-panel">
-<div class="panel-section">
-<button class="btn btn-primary btn-full-width" @onclick="SelectFolderAndLoadTreeAsync"
-disabled="@_isLoading">
-<TablerIcon OutlineIcon="@TablerIconOutlineName.FolderOpen" Class="me-1" Size="18px"/>
-Select Root Folder
-</button>
-@if (!string.IsNullOrEmpty(_currentDisplayRootPath))
-{
-<p class="mt-2 mb-0 text-muted small">Current: <strong
-title="@_currentDisplayRootPath">@_currentDisplayRootPath.Shorten(80)</strong></p>
-}
-</div>
-@if (_isLoading && string.IsNullOrEmpty(_currentDisplayRootPath))
-{
-<div class="panel-section">
-<div class="alert alert-info mt-3" role="alert">
-<div class="d-flex align-items-center">
-<div class="spinner-border spinner-border-sm me-2" role="status">
-<span class="visually-hidden">Loading...</span>
-</div>
-<div>
-<strong>Loading...</strong>
-@if (!string.IsNullOrEmpty(_loadingMessage))
-{
-<div class="small">@_loadingMessage</div>
-}
-else
-{
-<div class="small">Please wait.</div>
-}
-</div>
-</div>
-</div>
-</div>
-}
-else if (!string.IsNullOrEmpty(_loadingMessage) && _loadingMessage.StartsWith("Error"))
-{
-<div class="panel-section">
-<div class="alert alert-danger mt-3" role="alert">
-@_loadingMessage
-</div>
-</div>
-}
-else if (!string.IsNullOrEmpty(_loadingMessage))
-{
-<div class="panel-section">
-<div class="alert alert-warning mt-3" role="alert">
-@_loadingMessage
-</div>
-</div>
-}
-@if (!_isLoading || !string.IsNullOrEmpty(_currentDisplayRootPath))
-{
-<div class="panel-section">
-<h4 class="panel-title">File System</h4>
-<div class="file-tree-container scrollable-area">
-@if (_isLoadingTree && !DisplayRootItems.Any())
-{
-<p class="text-muted">Loading tree...</p>
-}
-else if (string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(_loadingMessage) && !_isLoadingTree)
-{
-<p class="text-muted">Select a root folder.</p>
-}
-else if (DisplayRootItems.Any())
-{
-@foreach (var item in DisplayRootItems.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name))
-{
-<FileTreeNode Node="item"
-SelectedFilePaths="_selectedFilePaths"
-OnSelectionChanged="HandleSelectionChangedAsync"
-Level="0"/>
-}
-}
-else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(_loadingMessage) && !_isLoadingTree)
-{
-<p class="text-muted">No files or directories to display.</p>
-}
-</div>
-</div>
-<div class="panel-section">
-            <h4 class="panel-title">
-                Selected Files (@_selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false }))
-            </h4>
-            @if (_selectedFilePaths.Any())
+    <div class="left-panel">
+        <div class="panel-section">
+            <button class="btn btn-primary btn-full-width" @onclick="SelectFolderAndLoadTreeAsync"
+                    disabled="@_isLoading">
+                <TablerIcon OutlineIcon="@TablerIconOutlineName.FolderOpen" Class="me-1" Size="18px"/>
+                Select Root Folder
+            </button>
+            @if (!string.IsNullOrEmpty(_currentDisplayRootPath))
             {
-                var selectedFileNodes = _selectedFilePaths
-                    .Select(GetNodeByPath)
-                    .Where(node => node is { IsDirectory: false })
-                    .OrderBy(node => node!.FullPath)
-                    .ToList();
-
-                if (selectedFileNodes.Any())
-                {
-                    <div class="selected-files-list scrollable-area-sm list-group">
-                        @foreach (var node in selectedFileNodes.OfType<FileSystemItem>())
-                        {
-                            <div
-                                class="list-group-item list-group-item-action d-flex align-items-center py-1 px-2">
-                                <TablerIcon
-                                    OutlineIcon="@IconHelper.GetIconForItem(node.Name, node.IsDirectory, node.IsExpanded)"
-                                    Size="18px"
-                                    Class="me-2 flex-shrink-0"
-                                    Color="@(node.IsDirectory ? "var(--app-primary-color)" : "var(--text-color)")"/>
-                                <span class="text-truncate" title="@node.FullPath">@node.Name</span>
-                            </div>
-                        }
+                <p class="mt-2 mb-0 text-muted small">Current: <strong
+                        title="@_currentDisplayRootPath">@_currentDisplayRootPath.Shorten(80)</strong></p>
+            }
+        </div>
+        @if (_isLoading && string.IsNullOrEmpty(_currentDisplayRootPath))
+        {
+            <div class="panel-section">
+                <div class="alert alert-info mt-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>Loading...</strong>
+                            @if (!string.IsNullOrEmpty(_loadingMessage))
+                            {
+                                <div class="small">@_loadingMessage</div>
+                            }
+                            else
+                            {
+                                <div class="small">Please wait.</div>
+                            }
+                        </div>
                     </div>
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(_loadingMessage) && _loadingMessage.StartsWith("Error"))
+        {
+            <div class="panel-section">
+                <div class="alert alert-danger mt-3" role="alert">
+                    @_loadingMessage
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(_loadingMessage))
+        {
+            <div class="panel-section">
+                <div class="alert alert-warning mt-3" role="alert">
+                    @_loadingMessage
+                </div>
+            </div>
+        }
+        @if (!_isLoading || !string.IsNullOrEmpty(_currentDisplayRootPath))
+        {
+            <div class="panel-section">
+                <h4 class="panel-title">File System</h4>
+                <div class="file-tree-container scrollable-area">
+                    @if (_isLoadingTree && !DisplayRootItems.Any())
+                    {
+                        <p class="text-muted">Loading tree...</p>
+                    }
+                    else if (string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(_loadingMessage) && !_isLoadingTree)
+                    {
+                        <p class="text-muted">Select a root folder.</p>
+                    }
+                    else if (DisplayRootItems.Any())
+                    {
+                        @foreach (var item in DisplayRootItems.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name))
+                        {
+                            <FileTreeNode Node="item"
+                                          SelectedFilePaths="_selectedFilePaths"
+                                          OnSelectionChanged="HandleSelectionChangedAsync"
+                                          Level="0"/>
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(_loadingMessage) && !_isLoadingTree)
+                    {
+                        <p class="text-muted">No files or directories to display.</p>
+                    }
+                </div>
+            </div>
+            <div class="panel-section">
+                <h4 class="panel-title">
+                    Selected Files (@_selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false }))
+                </h4>
+                @if (_selectedFilePaths.Any())
+                {
+                    var selectedFileNodes = _selectedFilePaths
+                        .Select(GetNodeByPath)
+                        .Where(node => node is { IsDirectory: false })
+                        .OrderBy(node => node!.FullPath)
+                        .ToList();
+
+                    if (selectedFileNodes.Any())
+                    {
+                        <div class="selected-files-list scrollable-area-sm list-group">
+                            @foreach (var node in selectedFileNodes.OfType<FileSystemItem>())
+                            {
+                                <div
+                                    class="list-group-item list-group-item-action d-flex align-items-center py-1 px-2">
+                                    <TablerIcon
+                                        OutlineIcon="@IconHelper.GetIconForItem(node.Name, node.IsDirectory, node.IsExpanded)"
+                                        Size="18px"
+                                        Class="me-2 flex-shrink-0"
+                                        Color="@(node.IsDirectory ? "var(--app-primary-color)" : "var(--text-color)")"/>
+                                    <span class="text-truncate" title="@node.FullPath">@node.Name</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small">No files selected (only directories might be checked).</p>
+                    }
+
+                    <button class="btn btn-outline btn-sm mt-2" @onclick="ClearAllSelectionsAsync"
+                            disabled="@_isLoading">
+                        <TablerIcon OutlineIcon="@TablerIconOutlineName.Trash" Class="me-1" Size="16px"/>
+                        Clear Selection
+                    </button>
                 }
                 else
                 {
-                    <p class="text-muted small">No files selected (only directories might be checked).</p>
+                    <p class="text-muted small">No items selected.</p>
                 }
-
-                <button class="btn btn-outline btn-sm mt-2" @onclick="ClearAllSelectionsAsync"
-                        disabled="@_isLoading">
-                    <TablerIcon OutlineIcon="@TablerIconOutlineName.Trash" Class="me-1" Size="16px"/>
-                    Clear Selection
-                </button>
-            }
-            else
-            {
-                <p class="text-muted small">No items selected.</p>
-            }
-        </div>
-    }
-</div>
-
-<div class="right-panel">
-    <div class="content-actions-area">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="panel-title mb-0">
-                Merged Content
-                @if (_isMergingContent)
-                {
-                    <span class="spinner-border spinner-border-sm ms-2" role="status"
-                          aria-hidden="true"></span>
-                }
-            </h4>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-light me-2" @onclick="GenerateMergedContentAsync"
-                        disabled="@(_isMergingContent || _selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false }) == 0)">
-                    <TablerIcon OutlineIcon="@TablerIconOutlineName.Refresh" Class="me-1" Size="16px"/>
-                    Refresh
-                </button>
-                <button class="btn btn-primary" @onclick="CopyMergedContentToClipboardAsync"
-                        disabled="@(_isMergingContent || string.IsNullOrEmpty(_mergedFileContentPlainText))">
-                    <TablerIcon OutlineIcon="@TablerIconOutlineName.Clipboard" Class="me-1" Size="16px"/>
-                    Copy
-                </button>
-                <span id="copyFeedback" class="ms-2 small text-success"></span>
             </div>
-        </div>
+            <div class="panel-section">
+                <h4 class="panel-title">Saved Contexts</h4>
+                @if (!string.IsNullOrEmpty(_contextStatusMessage))
+                {
+                    <div class="alert @(_contextStatusIsError ? "alert-danger" : "alert-success") small py-1 px-2 mb-2"
+                         role="alert">
+                        @_contextStatusMessage
+                    </div>
+                }
 
-        @if (!string.IsNullOrEmpty(_mergeErrorMessage))
-        {
-            <div class="alert alert-danger small py-1 px-2">@_mergeErrorMessage</div>
+                @if (string.IsNullOrEmpty(_currentDisplayRootPath))
+                {
+                    <p class="text-muted small">Select a root folder to manage contexts.</p>
+                }
+                else
+                {
+                    var contextsForCurrentPath = _appSettings?.SavedContexts
+                        .Where(c => c.RootPath == _currentDisplayRootPath)
+                        .OrderBy(c => c.Name)
+                        .ToList() ?? [];
+
+                    <div class="mb-2">
+                        <label for="newContextName" class="form-label small mb-1">Save current selection as:</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="newContextName" class="form-control form-control-sm"
+                                   @bind="_newContextName" placeholder="Enter context name..."/>
+                            <button class="btn btn-light" @onclick="SaveCurrentContextAsync"
+                                    disabled="@(string.IsNullOrWhiteSpace(_newContextName) || _selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false }) == 0 || _isLoading)">
+                                <TablerIcon OutlineIcon="@TablerIconOutlineName.DeviceFloppy" Size="16px"/>
+                                Save
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (contextsForCurrentPath.Any())
+                    {
+                        <label for="loadContextSelect" class="form-label small mb-1">Load context:</label>
+                        <div class="input-group input-group-sm">
+                            <select id="loadContextSelect" class="form-select form-select-sm"
+                                    @bind="_selectedContextToLoadId">
+                                <option value="">Select to load/delete...</option>
+                                @foreach (var ctx in contextsForCurrentPath)
+                                {
+                                    <option value="@ctx.Name">@ctx.Name</option>
+                                }
+                            </select>
+                            <button class="btn btn-light"
+                                    @onclick="HandleLoadContextClickedAsync"
+                                    disabled="@(string.IsNullOrEmpty(_selectedContextToLoadId) || _isLoading)">
+                                <TablerIcon OutlineIcon="@TablerIconOutlineName.PlayerPlay" Size="16px"/>
+                                Load
+                            </button>
+                            <button class="btn btn-subtle-danger"
+                                    @onclick="() => DeleteContextAsync(_selectedContextToLoadId!)"
+                                    disabled="@(string.IsNullOrEmpty(_selectedContextToLoadId) || _isLoading)">
+                                <TablerIcon OutlineIcon="@TablerIconOutlineName.Trash" Size="16px"/>
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mt-2">No saved contexts for this root folder.</p>
+                    }
+                }
+            </div>
         }
+    </div>
 
-        <div class="mb-3">
-            <label for="userPrompt" class="form-label">User Prompt:</label>
-            <div class="input-group">
+    <div class="right-panel">
+        <div class="content-actions-area">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="panel-title mb-0">
+                    Merged Content
+                    @if (_isMergingContent)
+                    {
+                        <span class="spinner-border spinner-border-sm ms-2" role="status"
+                              aria-hidden="true"></span>
+                    }
+                </h4>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-light me-2" @onclick="GenerateMergedContentAsync"
+                            disabled="@(_isMergingContent || _selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false }) == 0)">
+                        <TablerIcon OutlineIcon="@TablerIconOutlineName.Refresh" Class="me-1" Size="16px"/>
+                        Refresh
+                    </button>
+                    <button class="btn btn-primary" @onclick="CopyMergedContentToClipboardAsync"
+                            disabled="@(_isMergingContent || string.IsNullOrEmpty(_mergedFileContentPlainText))">
+                        <TablerIcon OutlineIcon="@TablerIconOutlineName.Clipboard" Class="me-1" Size="16px"/>
+                        Copy
+                    </button>
+                    <span id="copyFeedback" class="ms-2 small text-success"></span>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_mergeErrorMessage))
+            {
+                <div class="alert alert-danger small py-1 px-2">@_mergeErrorMessage</div>
+            }
+
+            <div class="mb-3">
+                <label for="userPrompt" class="form-label">User Prompt:</label>
+                <div class="input-group">
         <textarea id="userPrompt" class="form-control" rows="3"
                   value="@_userPrompt" @oninput="HandleUserPromptInput"
                   placeholder="Enter any specific instructions or questions here..."></textarea>
-                <button class="btn btn-light" type="button" @onclick="ClearUserPromptAndRefresh"
-                        title="Clear User Prompt">
-                    <TablerIcon OutlineIcon="@TablerIconOutlineName.ClearAll" Size="16px"/>
-                </button>
-            </div>
-            <div class="form-text">This prompt is not saved. It appears after files and before the Post-Prompt.
-                Refreshes automatically after you stop typing.
+                    <button class="btn btn-light" type="button" @onclick="ClearUserPromptAndRefresh"
+                            title="Clear User Prompt">
+                        <TablerIcon OutlineIcon="@TablerIconOutlineName.ClearAll" Size="16px"/>
+                    </button>
+                </div>
+                <div class="form-text">This prompt is not saved. It appears after files and before the Post-Prompt.
+                    Refreshes automatically after you stop typing.
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="merged-content-viewer scrollable-area">
-        @{
-            var selectedActualFilesCount = _selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false });
-        }
-
-        @if (selectedActualFilesCount > 0 || _mergedFilesToDisplay.Any())
-        {
-            @if (_mergedFilesToDisplay.Any())
-            {
-                <Virtualize Items="@_mergedFilesToDisplay" Context="fileItem">
-                    <div @key="fileItem.FilePath" class="file-block @(fileItem.ErrorMessage != null ? "error-block" : "")">
-                        <p class="file-header">
-                            // File: @fileItem.RelativePath @(fileItem.ErrorMessage != null ? "(Error)" : "")
-                        </p>
-
-                        @if (fileItem.ErrorMessage != null)
-                        {
-                            <pre class="file-content-error"><code>@fileItem.Content</code></pre>
-                        }
-                        else if (fileItem.FilePath == "SYSTEM_PRE_PROMPT" || fileItem.FilePath == "SYSTEM_POST_PROMPT" || fileItem.FilePath == "SYSTEM_USER_PROMPT")
-                        {
-                            <pre class="file-content-system-prompt"><code>@fileItem.Content</code></pre>
-                        }
-                        else
-                        {
-                            <CodeHighlighter Content="@fileItem.Content"
-                                             LanguageDefinition="@fileItem.Language"/>
-                        }
-
-                        <p class="file-footer">
-                            // End of file: @fileItem.RelativePath
-                        </p>
-                    </div>
-                </Virtualize>
+        <div class="merged-content-viewer scrollable-area">
+            @{
+                var selectedActualFilesCount = _selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false });
             }
-            else if (!_isMergingContent && selectedActualFilesCount > 0)
+
+            @if (selectedActualFilesCount > 0 || _mergedFilesToDisplay.Any())
             {
-                <div class="merged-content-placeholder">
-                    <p class="text-muted m-0">Click "Refresh" to view merged content.</p>
-                </div>
+                @if (_mergedFilesToDisplay.Any())
+                {
+                    <Virtualize Items="@_mergedFilesToDisplay" Context="fileItem">
+                        <div @key="fileItem.FilePath"
+                             class="file-block @(fileItem.ErrorMessage != null ? "error-block" : "")">
+                            <p class="file-header">
+                                // File: @fileItem.RelativePath @(fileItem.ErrorMessage != null ? "(Error)" : "")
+                            </p>
+
+                            @if (fileItem.ErrorMessage != null)
+                            {
+                                <pre class="file-content-error"><code>@fileItem.Content</code></pre>
+                            }
+                            else if (fileItem.FilePath == "SYSTEM_PRE_PROMPT" || fileItem.FilePath == "SYSTEM_POST_PROMPT" || fileItem.FilePath == "SYSTEM_USER_PROMPT")
+                            {
+                                <pre class="file-content-system-prompt"><code>@fileItem.Content</code></pre>
+                            }
+                            else
+                            {
+                                <CodeHighlighter Content="@fileItem.Content"
+                                                 LanguageDefinition="@fileItem.Language"/>
+                            }
+
+                            <p class="file-footer">
+                                // End of file: @fileItem.RelativePath
+                            </p>
+                        </div>
+                    </Virtualize>
+                }
+                else if (!_isMergingContent && selectedActualFilesCount > 0)
+                {
+                    <div class="merged-content-placeholder">
+                        <p class="text-muted m-0">Click "Refresh" to view merged content.</p>
+                    </div>
+                }
+                else if (!_isMergingContent)
+                {
+                    <div class="merged-content-placeholder">
+                        <p class="text-muted m-0">Select files to view merged content.</p>
+                    </div>
+                }
             }
             else if (!_isMergingContent)
             {
                 <div class="merged-content-placeholder">
-                    <p class="text-muted m-0">Select files to view merged content.</p>
+                    <p class="text-muted m-0">Select files from the tree to see their merged content.</p>
                 </div>
             }
-        }
-        else if (!_isMergingContent)
-        {
-            <div class="merged-content-placeholder">
-                <p class="text-muted m-0">Select files from the tree to see their merged content.</p>
-            </div>
-        }
+        </div>
     </div>
 </div>
-</div>
+
 @code {
     private List<FileSystemItem> _trueRootItems = [];
     private List<FileSystemItem> DisplayRootItems { get; set; } = [];
@@ -265,30 +332,31 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
     private Timer? _userPromptDebounceTimer;
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(500);
 
+    private AppSettings? _appSettings;
+    private string _newContextName = "";
+    private string? _selectedContextToLoadId;
+    private string _contextStatusMessage = "";
+    private bool _contextStatusIsError = false;
+
     protected override async Task OnInitializedAsync()
     {
+        _appSettings = await SettingsService.GetAppSettingsAsync();
         var persistedState = NavStateService.ConsumePersistedState();
+
         if (persistedState?.RootPath != null)
         {
             _currentDisplayRootPath = persistedState.RootPath;
-            var tempSelectedPaths = new List<string>(persistedState.SelectedFilePaths);
-
             await LoadFileTreeAsync(_currentDisplayRootPath);
 
-            if (_trueRootItems.Any() || DisplayRootItems.Any())
+            if ((_trueRootItems.Any() || DisplayRootItems.Any()) && persistedState.SelectedFilePaths.Any())
             {
-                foreach (var path in tempSelectedPaths)
-                {
-                    var node = GetNodeByPath(path);
-                    if (node != null && !node.IsDirectory)
-                    {
-                        node.SetSelectionStatus(true, _selectedFilePaths);
-                        node.UpdateParentSelectionStatus(_selectedFilePaths);
-                    }
-                }
+                await RestoreFileSelectionsAsync(persistedState.SelectedFilePaths);
+                await GenerateMergedContentAsync();
             }
-
-            await GenerateMergedContentAsync();
+            else if (string.IsNullOrEmpty(_currentDisplayRootPath))
+            {
+                await GenerateMergedContentAsync();
+            }
         }
     }
 
@@ -296,6 +364,7 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
     {
         _isLoading = true;
         _loadingMessage = "Waiting for folder selection...";
+        _contextStatusMessage = "";
         await InvokeAsync(StateHasChanged);
 
         var photinoWindow = MainWindowFactory();
@@ -316,7 +385,18 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
         {
             var selectedPath = folderPathArray[0];
             Logger.LogInformation("User selected folder: {SelectedPath}", selectedPath);
-            await LoadFileTreeAsync(selectedPath);
+
+            if (_currentDisplayRootPath != selectedPath)
+            {
+                await ClearAllSelectionsAsync();
+                _currentDisplayRootPath = selectedPath;
+                await LoadFileTreeAsync(selectedPath);
+                await GenerateMergedContentAsync();
+            }
+            else
+            {
+                await LoadFileTreeAsync(selectedPath);
+            }
         }
         else
         {
@@ -335,6 +415,7 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
     {
         _isLoadingTree = true;
         _loadingMessage = "Preparing to load file tree...";
+        _contextStatusMessage = "";
         _trueRootItems = [];
         DisplayRootItems = [];
         _selectedFilePaths.Clear();
@@ -358,18 +439,18 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
         FileTreeService.FileTreeLoadResult? result = null;
         try
         {
-            var appSettings = await SettingsService.GetAppSettingsAsync();
+            _appSettings ??= await SettingsService.GetAppSettingsAsync();
 
-            Action<string> reportProgressAction = newProgressMessage =>
+            async Task ReportProgressAction(string newProgressMessage)
             {
-                InvokeAsync(() =>
+                await InvokeAsync(() =>
                 {
                     _loadingMessage = newProgressMessage;
                     StateHasChanged();
                 });
-            };
+            }
 
-            result = await FileTreeSvc.LoadTreeAsync(rootPath, appSettings.IgnorePatterns, reportProgressAction);
+            result = await FileTreeSvc.LoadTreeAsync(rootPath, _appSettings.IgnorePatterns, ReportProgressAction);
 
             if (result.IsError)
             {
@@ -410,41 +491,115 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
         }
     }
 
+    private async Task RestoreFileSelectionsAsync(List<string> pathsToSelect)
+    {
+        foreach (var trueRootItem in _trueRootItems) DeselectNodeAndChildrenRecursive(trueRootItem);
+        _selectedFilePaths.Clear();
+
+        if (!_trueRootItems.Any() && !DisplayRootItems.Any()) return;
+
+        foreach (var path in pathsToSelect)
+        {
+            var node = GetNodeByPath(path);
+            if (node is { IsDirectory: false })
+            {
+                node.SetSelectionStatus(true, _selectedFilePaths);
+            }
+        }
+
+        var uniqueParentPaths = new HashSet<string>();
+        foreach (var path in _selectedFilePaths.ToList()) 
+        {
+            var node = GetNodeByPath(path); 
+            if (node?.Parent != null)
+            {
+                var allChildrenSelected = node.Parent.Children.All(c => c.IsSelected);
+                if (node.Parent.IsSelected != allChildrenSelected)
+                {
+                    uniqueParentPaths.Add(node.Parent.FullPath);
+                }
+            }
+        }
+
+        foreach (var parentPath in uniqueParentPaths)
+        {
+            var parentNode = GetNodeByPath(parentPath);
+            parentNode?.UpdateParentSelectionStatus(_selectedFilePaths);
+        }
+    }
+
+
     private async Task HandleSelectionChangedAsync(FileSystemItem changedItem)
     {
+        _contextStatusMessage = "";
         await GenerateMergedContentAsync();
     }
 
     private async Task ClearUserPromptAndRefresh()
     {
         _userPrompt = "";
-        _userPromptDebounceTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-        _userPromptDebounceTimer?.Dispose();
-        _userPromptDebounceTimer = null;
+        if (_userPromptDebounceTimer != null)
+        {
+            await _userPromptDebounceTimer.DisposeAsync();
+            _userPromptDebounceTimer = null;
+        }
         await GenerateMergedContentAsync();
     }
 
     private async Task HandleUserPromptInput(ChangeEventArgs e)
     {
         _userPrompt = e.Value?.ToString() ?? "";
-        _userPromptDebounceTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-        _userPromptDebounceTimer?.Dispose();
-        _userPromptDebounceTimer = new Timer(async _ => { await InvokeAsync(GenerateMergedContentAsync); }, null, (int)_debounceTime.TotalMilliseconds, Timeout.Infinite);
+
+        if (_userPromptDebounceTimer == null)
+        {
+            _userPromptDebounceTimer = new Timer(
+                DebouncedUserPromptAction,
+                null,
+                _debounceTime,
+                Timeout.InfiniteTimeSpan);
+        }
+        else
+        {
+            _userPromptDebounceTimer.Change(_debounceTime, Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private async void DebouncedUserPromptAction(object? state)
+    {
+        try
+        {
+            await InvokeAsync(GenerateMergedContentAsync);
+        }
+        catch (ObjectDisposedException)
+        {
+            Logger.LogDebug("DebouncedUserPromptAction was skipped or interrupted as the component may have been disposed.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error executing DebouncedUserPromptAction.");
+            await InvokeAsync(() =>
+            {
+                if (string.IsNullOrEmpty(_mergeErrorMessage))
+                {
+                    _mergeErrorMessage = "An unexpected error occurred while processing your input. Please try again.";
+                }
+                _isMergingContent = false;
+                StateHasChanged();
+            });
+        }
     }
 
     private async Task ClearAllSelectionsAsync()
     {
-        foreach (var trueRootItem in _trueRootItems)
-        {
-            DeselectNodeAndChildrenRecursive(trueRootItem);
-        }
-
+        foreach (var trueRootItem in _trueRootItems) DeselectNodeAndChildrenRecursive(trueRootItem);
         _selectedFilePaths.Clear();
         _mergedFilesToDisplay.Clear();
         _mergedFileContentPlainText = "";
         _mergeErrorMessage = "";
         _isMergingContent = false;
+        _contextStatusMessage = "";
         await InvokeAsync(StateHasChanged);
+        await GenerateMergedContentAsync();
     }
 
     private static void DeselectNodeAndChildrenRecursive(FileSystemItem node)
@@ -489,7 +644,7 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
         _mergedFilesToDisplay.Clear();
         await InvokeAsync(StateHasChanged);
 
-        var appSettings = await SettingsService.GetAppSettingsAsync();
+        _appSettings ??= await SettingsService.GetAppSettingsAsync();
         var filesToMerge = _selectedFilePaths
             .Select(GetNodeByPath)
             .Where(node => node is { IsDirectory: false })
@@ -498,9 +653,9 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
             .ToList();
 
         if (!filesToMerge.Any() &&
-            string.IsNullOrWhiteSpace(appSettings.PrePrompt) &&
+            string.IsNullOrWhiteSpace(_appSettings.PrePrompt) &&
             string.IsNullOrWhiteSpace(_userPrompt) &&
-            string.IsNullOrWhiteSpace(appSettings.PostPrompt))
+            string.IsNullOrWhiteSpace(_appSettings.PostPrompt))
         {
             _mergedFileContentPlainText = "";
             _isMergingContent = false;
@@ -508,7 +663,7 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
             return;
         }
 
-        var result = await ContentMergerSvc.GenerateMergedContentAsync(filesToMerge, appSettings, _userPrompt, _currentDisplayRootPath);
+        var result = await ContentMergerSvc.GenerateMergedContentAsync(filesToMerge, _appSettings, _userPrompt, _currentDisplayRootPath);
 
         _mergedFilesToDisplay = result.MergedFilesToDisplay;
         _mergedFileContentPlainText = result.MergedFileContentPlainText;
@@ -534,7 +689,7 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
                     await JsRuntime.InvokeVoidAsync("eval", @"
                     var el = document.getElementById('copyFeedback');
                     if(el) {
-                        el.innerText = 'Copy init failed!'; el.style.color = 'var(--mantine-color-red-6)'; // Assuming Mantine color or fallback to 'red'
+                        el.innerText = 'Copy init failed!'; el.style.color = 'var(--mantine-color-red-6)';
                         setTimeout(() => { if(el) el.innerText = ''; }, 3000);
                     }");
                 }
@@ -546,10 +701,150 @@ else if (!string.IsNullOrEmpty(_currentDisplayRootPath) && string.IsNullOrEmpty(
         }
     }
 
-    public ValueTask DisposeAsync()
+    private async Task SaveCurrentContextAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_currentDisplayRootPath))
+        {
+            _contextStatusMessage = "Cannot save context: No root folder selected.";
+            _contextStatusIsError = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newContextName))
+        {
+            _contextStatusMessage = "Cannot save context: Please provide a name.";
+            _contextStatusIsError = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var actualSelectedFiles = _selectedFilePaths.Select(GetNodeByPath).Where(n => n is { IsDirectory: false }).Select(n => n!.FullPath).ToList();
+        if (!actualSelectedFiles.Any())
+        {
+            _contextStatusMessage = "Cannot save context: No files are selected.";
+            _contextStatusIsError = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _appSettings ??= await SettingsService.GetAppSettingsAsync();
+        var trimmedNewContextName = _newContextName.Trim();
+
+        var existingContext = _appSettings.SavedContexts.FirstOrDefault(c => c.RootPath == _currentDisplayRootPath && c.Name == trimmedNewContextName);
+        if (existingContext != null)
+        {
+            existingContext.SelectedFilePaths = new List<string>(actualSelectedFiles);
+            _contextStatusMessage = $"Context '{trimmedNewContextName}' updated.";
+        }
+        else
+        {
+            var newContext = new SavedContext
+            {
+                Name = trimmedNewContextName,
+                RootPath = _currentDisplayRootPath,
+                SelectedFilePaths = new List<string>(actualSelectedFiles)
+            };
+            _appSettings.SavedContexts.Add(newContext);
+            _contextStatusMessage = $"Context '{trimmedNewContextName}' saved.";
+        }
+
+        _contextStatusIsError = false;
+
+        await SettingsService.SaveAppSettingsAsync(_appSettings);
+        _newContextName = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleLoadContextClickedAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedContextToLoadId) || string.IsNullOrEmpty(_currentDisplayRootPath)) return;
+
+        _appSettings ??= await SettingsService.GetAppSettingsAsync();
+        var contextToLoad = _appSettings.SavedContexts.FirstOrDefault(c => c.RootPath == _currentDisplayRootPath && c.Name == _selectedContextToLoadId);
+
+        if (contextToLoad != null)
+        {
+            await ApplyContextAsync(contextToLoad);
+            _contextStatusMessage = $"Context '{contextToLoad.Name}' loaded.";
+            _contextStatusIsError = false;
+        }
+        else
+        {
+            _contextStatusMessage = $"Context '{_selectedContextToLoadId}' not found.";
+            _contextStatusIsError = true;
+        }
+
+        _selectedContextToLoadId = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyContextAsync(SavedContext contextToApply)
+    {
+        if (string.IsNullOrEmpty(contextToApply.RootPath))
+        {
+            _contextStatusMessage = "Error: Context has an invalid root path.";
+            _contextStatusIsError = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _isLoading = true;
+        _loadingMessage = $"Loading context '{contextToApply.Name}'...";
+        _contextStatusMessage = "";
+        await InvokeAsync(StateHasChanged);
+
+        if (contextToApply.RootPath != _currentDisplayRootPath)
+        {
+            _currentDisplayRootPath = contextToApply.RootPath;
+            await LoadFileTreeAsync(_currentDisplayRootPath);
+            if ((_trueRootItems.Any() || DisplayRootItems.Any()) && contextToApply.SelectedFilePaths.Any())
+            {
+                await RestoreFileSelectionsAsync([..contextToApply.SelectedFilePaths]);
+            }
+        }
+        else
+        {
+            await RestoreFileSelectionsAsync([..contextToApply.SelectedFilePaths]);
+        }
+
+        await GenerateMergedContentAsync();
+
+        _isLoading = false;
+        _loadingMessage = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    private async Task DeleteContextAsync(string contextNameToDelete)
+    {
+        if (string.IsNullOrWhiteSpace(_currentDisplayRootPath) || string.IsNullOrWhiteSpace(contextNameToDelete)) return;
+
+        _appSettings ??= await SettingsService.GetAppSettingsAsync();
+        var contextToRemove = _appSettings.SavedContexts.FirstOrDefault(c => c.RootPath == _currentDisplayRootPath && c.Name == contextNameToDelete);
+
+        if (contextToRemove != null)
+        {
+            _appSettings.SavedContexts.Remove(contextToRemove);
+            await SettingsService.SaveAppSettingsAsync(_appSettings);
+            _contextStatusMessage = $"Context '{contextNameToDelete}' deleted.";
+            _contextStatusIsError = false;
+            if (_selectedContextToLoadId == contextNameToDelete) _selectedContextToLoadId = null;
+        }
+        else
+        {
+            _contextStatusMessage = $"Context '{contextNameToDelete}' not found for current path.";
+            _contextStatusIsError = true;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
     {
         NavStateService.SetPersistedState(_currentDisplayRootPath, _selectedFilePaths);
-        _userPromptDebounceTimer?.Dispose();
-        return ValueTask.CompletedTask;
+        await (_userPromptDebounceTimer?.DisposeAsync() ?? ValueTask.CompletedTask);
+        _userPromptDebounceTimer = null;
     }
+
 }

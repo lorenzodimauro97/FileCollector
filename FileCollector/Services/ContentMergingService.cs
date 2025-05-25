@@ -32,7 +32,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         var mergedFilesToDisplay = new List<MergedFileDisplayItem>();
         var sbPlainText = new StringBuilder();
         var plainTextLanguage = new PlainTextLanguageDefinition();
-        string overallErrorMessage = "";
+        var overallErrorMessage = "";
 
         if (!string.IsNullOrWhiteSpace(appSettings.PrePrompt))
         {
@@ -47,7 +47,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         }
 
         var fileNodesToProcess = filesToMerge.ToList();
-        if (fileNodesToProcess.Any())
+        if (fileNodesToProcess.Count != 0)
         {
             foreach (var fileNode in fileNodesToProcess)
             {
@@ -117,7 +117,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
             AppendSectionToPlainText(sbPlainText, "Post-Prompt", appSettings.PostPrompt);
         }
 
-        if (!fileNodesToProcess.Any() &&
+        if (fileNodesToProcess.Count == 0 &&
             string.IsNullOrWhiteSpace(appSettings.PrePrompt) &&
             string.IsNullOrWhiteSpace(userPrompt) &&
             string.IsNullOrWhiteSpace(appSettings.PostPrompt))
