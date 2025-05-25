@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Prism.Blazor;
+﻿using Prism.Blazor;
 
 namespace FileCollector.Models;
 

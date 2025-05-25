@@ -51,6 +51,8 @@ internal class Program
                 loggingBuilder.ClearProviders(); 
                 loggingBuilder.AddSerilog(dispose: true);
             });
+            
+            appBuilder.Services.AddHttpClient();
 
             appBuilder.Services.AddSingleton<SettingsService>();
             appBuilder.Services.AddSingleton<IoService>();
@@ -58,6 +60,10 @@ internal class Program
             appBuilder.Services.AddSingleton<NavigationStateService>();
             appBuilder.Services.AddSingleton<FileTreeService>();
             appBuilder.Services.AddSingleton<ContentMergingService>();
+            
+            appBuilder.Services.AddSingleton<UpdateStateService>();
+            appBuilder.Services.AddSingleton<UpdateService>();
+
 
             appBuilder.Services.AddSingleton<Func<PhotinoWindow>>(() => mainWindowInstance!);
 
@@ -72,7 +78,7 @@ internal class Program
                 .SetTitle("File Collector")
                 .SetLogVerbosity(2); 
 
-            AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+            AppDomain.CurrentDomain.UnhandledException += (_, error) =>
             {
                 Log.Fatal(error.ExceptionObject as Exception, "Unhandled exception");
                 
@@ -81,7 +87,7 @@ internal class Program
                 {
                     userMessage += $"\n\nDetails: {ex.Message}";
                 }
-                app?.MainWindow?.ShowMessage("Fatal Exception", userMessage);
+                app.MainWindow?.ShowMessage("Fatal Exception", userMessage);
             };
 
             app.Run();

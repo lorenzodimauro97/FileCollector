@@ -1,0 +1,174 @@
+﻿@inject UpdateStateService UpdateStateSvc
+@inject UpdateService UpdateSvc
+@implements IAsyncDisposable
+
+@if (UpdateStateSvc.CurrentState != UpdateProcessState.Idle || _forceShowAfterUserCheck)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable)
+                        {
+                            <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Class="me-2" /> <span>Update Available</span>
+                        }
+                        else if (UpdateStateSvc.CurrentState == UpdateProcessState.Error)
+                        {
+                            <TablerIcon OutlineIcon="TablerIconOutlineName.AlertTriangle" Class="me-2" /> <span>Update Error</span>
+                        }
+                        else
+                        {
+                            <TablerIcon OutlineIcon="TablerIconOutlineName.InfoCircle" Class="me-2" /> <span>Application Update</span>
+                        }
+                    </h5>
+                    @if (CanCloseModal())
+                    {
+                        <button type="button" class="btn-close" @onclick="DismissModal" aria-label="Close"></button>
+                    }
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(UpdateStateSvc.StatusMessage))
+                    {
+                        <p>@UpdateStateSvc.StatusMessage</p>
+                    }
+
+                    @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable && UpdateStateSvc.AvailableUpdateInfo != null)
+                    {
+                        <p class="mt-1 mb-2"><small>You are currently on version: @(_currentAppVersion)</small></p>
+                        
+                        <h6>Release Details:</h6>
+                        <ul class="list-unstyled small ms-2 mb-2">
+                            <li><strong>Name:</strong> @UpdateStateSvc.AvailableUpdateInfo.Name</li>
+                            <li><strong>Published:</strong> @UpdateStateSvc.AvailableUpdateInfo.PublishedAt.ToString("g")</li>
+                        </ul>
+
+                        if (!string.IsNullOrWhiteSpace(UpdateStateSvc.AvailableUpdateInfo.Body))
+                        {
+                            <h6>Release Notes:</h6>
+                            <div class="release-notes scrollable-area-sm" style="max-height: 150px; background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">
+                                <pre style="white-space: pre-wrap; font-size: 0.8em;">@UpdateStateSvc.AvailableUpdateInfo.Body</pre>
+                            </div>
+                        }
+                    }
+                    else if (UpdateStateSvc.CurrentState != UpdateProcessState.UpdateAvailable && string.IsNullOrWhiteSpace(UpdateStateSvc.StatusMessage))
+                    {
+                        <p>Processing update status...</p>
+                    }
+
+                    @if (UpdateStateSvc.CurrentState == UpdateProcessState.Downloading || UpdateStateSvc.CurrentState == UpdateProcessState.Extracting)
+                    {
+                        <div class="progress mt-3">
+                            <div class="progress-bar @(UpdateStateSvc.CurrentState == UpdateProcessState.Error ? "bg-danger" : "progress-bar-striped progress-bar-animated")"
+                                 role="progressbar" style="width: @UpdateStateSvc.Progress%;"
+                                 aria-valuenow="@UpdateStateSvc.Progress" aria-valuemin="0" aria-valuemax="100">
+                                @(UpdateStateSvc.Progress.ToString("F0"))%
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable)
+                    {
+                        <button type="button" class="btn btn-light" @onclick="DismissModal">Later</button>
+                        <button type="button" class="btn btn-primary" @onclick="StartUpdateProcessAsync">
+                            <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Class="me-1" /> Update and Restart
+                        </button>
+                    }
+                    else if (UpdateStateSvc.CurrentState == UpdateProcessState.ReadyToApply && UpdateStateSvc.StatusMessage != null && UpdateStateSvc.StatusMessage.Contains("Updater launched"))
+                    {
+                         <button type="button" class="btn btn-primary" disabled>Closing...</button>
+                    }
+                    else if (CanCloseModal())
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="DismissModalAndReset">OK</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isCheckingManually = false;
+    private bool _forceShowAfterUserCheck = false;
+    private string _currentAppVersion = "N/A";
+
+    protected override async Task OnInitializedAsync()
+    {
+        UpdateStateSvc.OnUpdateStateChangedAsync += HandleUpdateStateChangedAsync;
+        _currentAppVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "N/A";
+
+        var appSettings = await UpdateSvc._settingsService.GetAppSettingsAsync(); // Friend access for demo
+        if (appSettings.Update.CheckForUpdatesOnStartup)
+        {
+            _ = UpdateSvc.CheckForUpdatesAsync();
+        }
+    }
+
+    private async Task HandleUpdateStateChangedAsync()
+    {
+        if (UpdateStateSvc.CurrentState == UpdateProcessState.Idle && _isCheckingManually)
+        {
+            _forceShowAfterUserCheck = true; // Keep modal open to show "up to date" message
+        }
+        else if (UpdateStateSvc.CurrentState != UpdateProcessState.Idle)
+        {
+            _forceShowAfterUserCheck = false; // Let normal logic take over
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool CanCloseModal()
+    {
+        return UpdateStateSvc.CurrentState switch
+        {
+            UpdateProcessState.Downloading => false,
+            UpdateProcessState.Extracting => false,
+            UpdateProcessState.Applying => false,
+            _ => true,
+        };
+    }
+    
+    private void DismissModal()
+    {
+        if (CanCloseModal())
+        {
+            if (_isCheckingManually && UpdateStateSvc.CurrentState == UpdateProcessState.Idle)
+            {
+                 // User initiated check, and it's up to date or error handled by status message
+            }
+            _forceShowAfterUserCheck = false;
+            _isCheckingManually = false;
+            // Don't reset state here, might be background check still.
+            // If user clicks "Later" on UpdateAvailable, state remains UpdateAvailable.
+            StateHasChanged();
+        }
+    }
+
+    private void DismissModalAndReset()
+    {
+        DismissModal();
+        UpdateStateSvc.ResetState(); // Full reset if user clicks OK on an error or info message
+    }
+
+    private async Task StartUpdateProcessAsync()
+    {
+        _isCheckingManually = false;
+        _forceShowAfterUserCheck = false;
+        await UpdateSvc.DownloadAndApplyUpdateAsync();
+    }
+
+    public async Task CheckForUpdatesManuallyAsync()
+    {
+        _isCheckingManually = true;
+        _forceShowAfterUserCheck = true; // Ensure modal shows for manual check result
+        await UpdateSvc.CheckForUpdatesAsync(initiatedByUser: true);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        UpdateStateSvc.OnUpdateStateChangedAsync -= HandleUpdateStateChangedAsync;
+        await Task.CompletedTask;
+    }
+}

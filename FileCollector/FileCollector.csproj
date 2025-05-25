@@ -8,6 +8,9 @@
 		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
 		<LangVersion>13</LangVersion>
 		<Nullable>enable</Nullable>
+		<Version>1.0.0</Version>
+		<InformationalVersion>1.0.0</InformationalVersion>
+		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -36,6 +39,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="BlazorTablerIcons" Version="1.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0-preview.3.24172.9" /> <!-- Or the latest .NET 9 preview version -->
 		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
 		<PackageReference Include="S97SP.Prism.Blazor" Version="1.0.3" />
 		<PackageReference Include="Serilog" Version="4.3.0" />
@@ -45,17 +49,52 @@
 		<PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
 	</ItemGroup>
 
+	<!-- Add ProjectReference to FileCollector.Updater -->
 	<ItemGroup>
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\FONT-LICENSE" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\font\css\open-iconic-bootstrap.min.css" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.eot" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.otf" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.svg" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.ttf" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.woff" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\ICON-LICENSE" />
-		<_ContentIncludedByDefault Remove="wwwroot\css\open-iconic\README.md" />
-		<_ContentIncludedByDefault Remove="wwwroot\sample-data\weather.json" />
+		<ProjectReference Include="..\FileCollector.Updater\FileCollector.Updater.csproj">
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly> <!-- We are not linking to it as a library -->
+			<SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties> <!-- Avoids issues for SDK-style projects -->
+		</ProjectReference>
 	</ItemGroup>
+
+	<!-- Custom target to publish and copy updater files -->
+	<Target Name="PublishAndCopyUpdaterFiles" AfterTargets="Build">
+		<PropertyGroup>
+			<_UpdaterProjectFullPath>$(MSBuildProjectDirectory)\..\FileCollector.Updater\FileCollector.Updater.csproj</_UpdaterProjectFullPath>
+			<!-- Define an intermediate directory for the updater's publish output -->
+			<_UpdaterIntermediatePublishDir>$(BaseIntermediateOutputPath)updater_publish\$([System.Guid]::NewGuid())</_UpdaterIntermediatePublishDir>
+			<!-- $(BaseIntermediateOutputPath) is typically obj/$(Configuration)/$(TargetFramework)/ -->
+		</PropertyGroup>
+
+		<Message Text="Publishing FileCollector.Updater to intermediate location: $(_UpdaterIntermediatePublishDir)" Importance="high" />
+		<!-- Use MSBuild task to publish the updater project -->
+		<MSBuild Projects="$(_UpdaterProjectFullPath)"
+				 Targets="Publish"
+				 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);PublishDir=$(_UpdaterIntermediatePublishDir);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=false" />
+		<!-- SelfContained=false for updater, assuming .NET 9 runtime is available via main app -->
+		<!-- Pass RuntimeIdentifier from main app's build/publish process -->
+
+		<ItemGroup>
+			<!-- Collect all files from the updater's intermediate publish directory -->
+			<_UpdaterFilesToCopy Include="$(_UpdaterIntermediatePublishDir)\**\*.*" />
+		</ItemGroup>
+
+		<Message Text="Copying FileCollector.Updater files to build output: $(OutputPath)" Importance="high" />
+		<!-- Copy to main project's build output directory (e.g., bin/Release/net9.0/) -->
+		<Copy SourceFiles="@(_UpdaterFilesToCopy)"
+			  DestinationFolder="$(OutputPath)\%(RecursiveDir)"
+			  SkipUnchangedFiles="true" />
+
+		<!-- Conditionally copy to main project's publish directory (e.g., bin/Release/net9.0/publish/) -->
+		<Message Text="Copying FileCollector.Updater files to publish output: $(PublishDir)" Importance="high" Condition=" '$(PublishDir)' != '' And '$(PublishDir)' != '$(OutputPath)' " />
+		<Copy SourceFiles="@(_UpdaterFilesToCopy)"
+			  DestinationFolder="$(PublishDir)\%(RecursiveDir)"
+			  SkipUnchangedFiles="true"
+			  Condition=" '$(PublishDir)' != '' And '$(PublishDir)' != '$(OutputPath)' " />
+		<!-- The condition '$(PublishDir)' != '$(OutputPath)' avoids redundant copy if paths are the same -->
+
+		<!-- Clean up the intermediate updater publish directory -->
+		<RemoveDir Directories="$(_UpdaterIntermediatePublishDir)" Condition="Exists('$(_UpdaterIntermediatePublishDir)')" />
+	</Target>
 
 </Project>

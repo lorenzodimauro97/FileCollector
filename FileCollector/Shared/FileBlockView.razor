@@ -34,25 +34,25 @@
     private DotNetObjectReference<FileBlockView>? _dotNetRef;
 
     private MarkupString _displayContent;
-    private bool _isHighlightingInProgress = false;
-    private bool _highlightingAttempted = false;
-    private string? _highlightingError = null;
+    private bool _isHighlightingInProgress;
+    private bool _highlightingAttempted;
+    private string? _highlightingError;
 
     protected override void OnParametersSet()
     {
         // If the block content changes, we need to reset and potentially re-highlight
-        if (Block != null && !_highlightingAttempted && !Block.IsError && !string.IsNullOrEmpty(Block.Content))
+        if (!_highlightingAttempted && !Block.IsError && !string.IsNullOrEmpty(Block.Content))
         {
             // Initially display HTML-encoded raw content
             _displayContent = (MarkupString)WebUtility.HtmlEncode(Block.Content);
             _isHighlightingInProgress = false; // Will be set true when JS call is made
             _highlightingError = null;
         }
-        else if (Block != null && Block.IsError)
+        else if (Block.IsError)
         {
              _displayContent = (MarkupString)string.Empty; // Error is handled above
         }
-        else if (Block != null && string.IsNullOrEmpty(Block.Content))
+        else if (string.IsNullOrEmpty(Block.Content))
         {
             _displayContent = (MarkupString)string.Empty; // Empty content
         }
@@ -60,7 +60,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Block != null && !Block.IsError && !string.IsNullOrEmpty(Block.Content) && !_highlightingAttempted && !_isHighlightingInProgress)
+        if (!Block.IsError && !string.IsNullOrEmpty(Block.Content) && !_highlightingAttempted && !_isHighlightingInProgress)
         {
             _highlightingAttempted = true; // Mark that we are trying to highlight this block
             _isHighlightingInProgress = true;
@@ -136,15 +136,15 @@
         return alias;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_dotNetRef != null)
-        {
-            // TODO: If the component is disposed before the worker finishes,
-            // we might want to tell JS to cancel or ignore the result for this ID.
-            // For now, JS will try to call back, find no helper, and log a warning.
-            _dotNetRef.Dispose();
-            _dotNetRef = null;
-        }
+        if (_dotNetRef == null) return ValueTask.CompletedTask;
+        // TODO: If the component is disposed before the worker finishes,
+        // we might want to tell JS to cancel or ignore the result for this ID.
+        // For now, JS will try to call back, find no helper, and log a warning.
+        _dotNetRef.Dispose();
+        _dotNetRef = null;
+
+        return ValueTask.CompletedTask;
     }
 }

@@ -24,7 +24,7 @@ public class FileTreeService(
         public List<FileSystemItem> TrueRootItems { get; init; } = [];
         public List<FileSystemItem> DisplayRootItems { get; init; } = [];
         public string Message { get; init; } = "";
-        public bool IsError { get; init; } = false;
+        public bool IsError { get; init; }
     }
 
     public async Task<FileTreeLoadResult> LoadTreeAsync(
