@@ -41,7 +41,7 @@ jobs:
         run: dotnet restore FileCollector/FileCollector.csproj
 
       - name: Publish application
-        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=true -o ./publish_output
+        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=true /p:DebugType=None -o ./publish_output
 
       - name: Archive output (Windows)
         if: matrix.os == 'windows-latest'
@@ -89,7 +89,7 @@ jobs:
             Automated release for commit ${{ github.sha }}.
             Builds for Windows, macOS, and Linux are attached.
           draft: false
-          prerelease: true
+          prerelease: false
           files: |
             ./FileCollector-win-x64/FileCollector-win-x64.zip
             ./FileCollector-osx-x64/FileCollector-osx-x64.tar.gz
