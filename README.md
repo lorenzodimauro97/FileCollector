@@ -1,14 +1,16 @@
 ﻿# File Collector
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-<!-- TODO: Add build status badge once GitHub Actions is set up -->
-<!-- [![Build Status](https://github.com/your-username/FileCollector/actions/workflows/release.yml/badge.svg)](https://github.com/your-username/FileCollector/actions/workflows/release.yml) -->
-<!-- TODO: Add latest release badge -->
-<!-- [![Latest Release](https://img.shields.io/github/v/release/your-username/FileCollector)](https://github.com/your-username/FileCollector/releases/latest) -->
+[![Build Status](https://img.shields.io/badge/Build-Pending-lightgrey)](https://github.com/lorenzodimauro97/FileCollector/actions)
+[![Latest Release](https://img.shields.io/github/v/release/lorenzodimauro97/FileCollector?display_name=tag&sort=semver&label=Release&color=blueviolet)](https://github.com/lorenzodimauro97/FileCollector/releases/latest)
+[![.NET Version](https://img.shields.io/badge/.NET-9.0-blueviolet.svg)](https://dotnet.microsoft.com/download/dotnet/9.0)
 
-**File Collector** is a streamlined, cross-platform desktop application designed to simplify the process of gathering and consolidating content from multiple files and directories. Built with the power of .NET Blazor and the lightweight Photino framework, it provides an intuitive interface for selecting local file system entries, applying sophisticated ignore patterns, and merging the contents into a single, ready-to-use text block.
+**File Collector** is a streamlined, cross-platform desktop application engineered to simplify the aggregation and consolidation of content from multiple files and directories. Built with the power of .NET 9, Blazor Hybrid, and the lightweight Photino framework, it provides an intuitive interface for selecting local file system entries, applying sophisticated ignore patterns (compatible with `.gitignore` syntax), and merging content into a single, structured text block.
 
-This tool is invaluable for developers, writers, researchers, or anyone who needs to aggregate textual information for Large Language Models (LLMs), create comprehensive code snippets for documentation, or compile various text sources into one cohesive output.
+This tool is invaluable for developers, writers, researchers, or anyone needing to:
+*   Compile comprehensive context for Large Language Models (LLMs).
+*   Create extensive code snippets for documentation or knowledge bases.
+*   Aggregate various text-based sources into one cohesive output.
 
 ## Table of Contents
 
@@ -21,71 +23,75 @@ This tool is invaluable for developers, writers, researchers, or anyone who need
     *   [Building and Running](#building-and-running)
 *   [How to Use](#how-to-use)
 *   [Configuration Details](#configuration-details)
-    *   [Application Settings](#application-settings)
-    *   [Ignore Patterns](#ignore-patterns)
+    *   [Application Settings (`appsettings.json`)](#application-settings-appsettingsjson)
+    *   [Ignore Patterns Explained](#ignore-patterns-explained)
+*   [Known Issues & Limitations](#known-issues--limitations)
+*   [Future Enhancements](#future-enhancements)
 *   [Contributing](#contributing)
 *   [License](#license)
 
 ## Why File Collector?
 
-In an era of information abundance and the rise of AI-powered tools, efficiently gathering and preparing textual data is more important than ever. File Collector addresses this need by:
+In an era of information abundance and the increasing sophistication of AI-powered tools, efficiently gathering and preparing textual data is paramount. File Collector addresses this need by:
 
-*   **Saving Time:** Quickly select and merge dozens of files instead of manually copying and pasting.
-*   **Reducing Errors:** Ensure all necessary content is included and unwanted content (like build artifacts or logs) is excluded through precise ignore patterns.
-*   **Improving LLM Prompts:** Construct comprehensive and well-formatted context for Large Language Models, leading to better and more accurate responses.
-*   **Streamlining Documentation:** Easily gather code snippets and textual explanations from various parts of a project.
-*   **Cross-Platform Accessibility:** Use the same tool seamlessly across Windows, macOS, and Linux environments.
+*   **Maximizing Efficiency:** Rapidly select and merge numerous files, eliminating tedious manual copy-pasting.
+*   **Ensuring Accuracy:** Precisely include necessary content while excluding artifacts (e.g., build outputs, logs) through robust ignore patterns.
+*   **Optimizing LLM Interactions:** Construct comprehensive and well-formatted context for LLMs, leading to significantly improved and more relevant responses.
+*   **Streamlining Documentation:** Effortlessly gather code snippets and textual explanations from diverse project components.
+*   **True Cross-Platform Functionality:** Utilize a consistent, native-feeling tool across Windows, macOS, and Linux environments.
 
 ## Core Features
 
-File Collector is packed with features designed to make your file aggregation process smooth and efficient:
+File Collector is engineered with a rich feature set for a seamless file aggregation experience:
 
-*   **Cross-Platform Native Experience:**
-    *   Leverages Photino to deliver a true native desktop application feel on Windows, macOS, and Linux, without the overhead of a full browser.
+*   **Native Cross-Platform Experience:**
+    *   Leverages Photino for a true native desktop application feel on Windows, macOS, and Linux, without the overhead of embedded browser engines.
 
-*   **Intuitive Folder Selection & Navigation:**
-    *   **Root Folder Selection:** Start by picking any folder on your system as the root for your collection.
-    *   **Interactive File Tree:** A dynamic tree view displays the selected folder's structure, allowing for easy browsing of directories and files.
+*   **Intuitive File System Interaction:**
+    *   **Root Folder Selection:** Initiate your collection by choosing any folder on your local system.
+    *   **Interactive File Tree:** A dynamic tree view presents the selected folder's structure, facilitating easy browsing and discovery.
 
-*   **Advanced Selection Control:**
-    *   **Checkbox Selection:** Select individual files or entire directories with simple checkboxes.
+*   **Advanced Selection Management:**
+    *   **Granular Selection:** Select individual files or entire directories using intuitive checkboxes.
     *   **Recursive Selection:** Checking a directory automatically selects all its non-ignored children (files and sub-directories).
-    *   **Parent-Child Sync:** The selection state of parent directories updates automatically based on the selection of their children, and vice-versa.
-    *   **Selected Files Overview:** A dedicated list shows only the *actual files* currently selected for merging, providing a clear count and quick reference.
+    *   **Parent-Child State Synchronization:** The selection state of parent directories dynamically updates based on child selections and vice-versa, ensuring visual consistency.
+    *   **Selected Files Overview:** A dedicated list displays only the *actual files* currently selected for merging, offering a clear count and quick reference.
 
-*   **Powerful Ignore Pattern System:**
-    *   **`.gitignore` Syntax:** Define patterns to exclude unwanted files and folders using the familiar `.gitignore` syntax (e.g., `bin/`, `obj/`, `*.log`, `temp/`).
-    *   **Negation Support:** Use `!` to explicitly include files that would otherwise be ignored by a broader pattern (e.g., `!important.log` within an ignored `logs/` directory).
-    *   **Centralized Settings:** Manage these patterns easily from the "Settings" page.
-    *   **Import from `.gitignore`:** Directly paste or upload the content of an existing `.gitignore` file to quickly populate your ignore list.
+*   **Powerful Ignore Pattern Engine:**
+    *   **`.gitignore` Syntax Compatibility:** Define patterns to exclude unwanted files and folders using the widely adopted `.gitignore` syntax (e.g., `bin/`, `obj/`, `*.log`, `temp/**`).
+    *   **Negation Support:** Employ `!` to explicitly include files that would otherwise be ignored by a broader pattern (e.g., `!important.log` within an ignored `logs/` directory).
+    *   **Centralized Pattern Management:** Easily manage ignore patterns via the dedicated "Settings" page.
+    *   **Import from `.gitignore`:** Directly paste content or upload an existing `.gitignore` file to rapidly populate your exclusion list.
 
 *   **Customizable Content Prompts:**
-    *   **Pre-Prompt:** Define text that will be automatically inserted *before* the content of the first selected file. Ideal for global instructions or context setting.
-    *   **Post-Prompt:** Define text that will be automatically inserted *after* the content of the last selected file but *before* the User Prompt. Useful for closing remarks or standard footers.
-    *   **User Prompt (Session-Specific):** Add a temporary prompt directly on the main page. This text is inserted *after* all file content and the Post-Prompt. It's perfect for specific questions or instructions related to the current merging session and is not saved permanently.
+    *   **Pre-Prompt:** Define text automatically inserted *before* the content of the first selected file. Ideal for global instructions or setting foundational context.
+    *   **Post-Prompt:** Define text automatically inserted *after* the content of the last selected file but *before* the User Prompt. Useful for closing remarks or standard footers.
+    *   **User Prompt (Session-Specific):** Add a temporary prompt directly on the main page. This text is inserted *after* all file content and the Post-Prompt. Perfect for ad-hoc questions or instructions for the current merging session; this prompt is not saved persistently.
 
 *   **Intelligent Content Merging & Display:**
-    *   **Ordered Merging:** Selected files are merged in lexicographical order of their full paths, ensuring consistent output.
-    *   **File Delimiters:** Each merged file's content is clearly demarcated with `// File: [path]` and `// End of file: [path]` comments, making it easy to identify individual file origins in the merged output.
-    *   **Syntax Highlighting:** The merged content viewer utilizes Prism.Blazor for syntax highlighting across a variety of common file types (e.g., C#, Razor, CSS, JS, SQL, etc.), significantly improving readability.
-    *   **Error Handling:** If a file cannot be read, an error message is displayed in its place within the merged content, ensuring you're aware of any issues without halting the entire process.
+    *   **Ordered Aggregation:** Selected files are merged in lexicographical order of their full paths, ensuring consistent and predictable output.
+    *   **Clear File Demarcation:** Each merged file's content is distinctly separated by `// File: [relative_path]` and `// End of file: [relative_path]` comments, simplifying identification of individual file origins.
+    *   **Syntax Highlighting:** The merged content viewer utilizes Prism.Blazor for rich syntax highlighting across numerous common file types (C#, Razor, CSS, JS, TS, SQL, etc.), significantly enhancing readability.
+    *   **Robust Error Handling:** If a file cannot be read, an informative error message is displayed in its place within the merged content, ensuring awareness of issues without halting the entire process.
 
-*   **Easy Output Management:**
-    *   **One-Click Copy:** A "Copy" button allows you to instantly copy the entire plain text version of the merged content (including prompts and file delimiters) to your clipboard.
-    *   **Refresh Content:** Easily regenerate the merged content with a "Refresh" button if selections or prompts change.
-    *   **Clear Selections:** Quickly deselect all files and clear the merged content.
+*   **Effortless Output Management:**
+    *   **One-Click Copy:** A "Copy" button allows instant copying of the entire plain text version of the merged content (including all prompts and file delimiters) to the system clipboard.
+    *   **Dynamic Refresh:** Easily regenerate the merged content with a "Refresh" button if selections or prompts change, or automatically upon User Prompt modification.
+    *   **Clear Selections:** Quickly deselect all files and clear the merged content view.
 
 *   **Persistent Configuration & State:**
-    *   **Settings Storage:** Ignore patterns, Pre-prompt, and Post-prompt are saved in an `appsettings.json` file located in the application's base directory.
-    *   **Session Restoration:** The application remembers the last selected root path and the specific files you had checked, allowing you to quickly resume your work when you reopen it.
+    *   **Settings Persistence:** Ignore patterns, Pre-Prompt, and Post-Prompt are saved in an `appsettings.json` file located in the application's base directory.
+    *   **Context Saving & Loading:** Save and load named "contexts" (a specific root path and its selected files) for quick recall of frequent selections.
+    *   **Session Resumption:** The application remembers the last used root path and its associated selected files, enabling a quick return to previous work upon reopening.
 
 ## Tech Stack
 
-*   **Framework:** C# / .NET 9
-*   **UI:** Blazor Hybrid
-*   **Desktop Shell:** Photino (for creating lightweight, cross-platform native desktop applications)
-*   **Icons:** BlazorTablerIcons
-*   **Syntax Highlighting:** S97SP.Prism.Blazor
+*   **Core Framework:** .NET 9 (C# 13)
+*   **UI Framework:** Blazor Hybrid (rendering web UI natively)
+*   **Desktop Shell:** Photino (for lightweight, cross-platform native desktop applications)
+*   **Iconography:** BlazorTablerIcons
+*   **Syntax Highlighting:** S97SP.Prism.Blazor (client-side)
+*   **Build & Packaging:** .NET SDK tools
 
 ## Screenshots
 
@@ -97,127 +103,158 @@ File Collector is packed with features designed to make your file aggregation pr
 
 ## Getting Started
 
-Follow these steps to get File Collector up and running on your system.
+Follow these steps to get File Collector built and running on your system.
 
 ### Prerequisites
 
-*   **.NET 9 SDK (or later):** Ensure you have the .NET 9 Software Development Kit installed. You can download it from the [official .NET website](https://dotnet.microsoft.com/download/dotnet/9.0).
+*   **.NET 9 SDK (or later):** Ensure the .NET 9 Software Development Kit is installed. Download from the [official .NET website](https://dotnet.microsoft.com/download/dotnet/9.0).
 
 ### Building and Running
 
 1.  **Clone the Repository:**
-    Open your terminal or command prompt and clone the project:
     ```bash
     git clone https://github.com/lorenzodimauro97/FileCollector.git
     cd FileCollector
     ```
     
 2.  **Restore Dependencies:**
-    Navigate to the project directory (if you haven't already) and restore the necessary .NET packages:
+    Navigate to the project's root directory (`FileCollector/`) and restore .NET packages:
     ```bash
     dotnet restore FileCollector/FileCollector.csproj
     ```
 
 3.  **Run the Application (Development):**
-    To run the application directly for development or testing:
+    Execute the following command from the `FileCollector/` directory:
     ```bash
     dotnet run --project FileCollector/FileCollector.csproj
     ```
 
 4.  **Publish for Distribution:**
-    To create distributable versions for different platforms:
+    To create distributable, self-contained applications:
     ```bash
-    # For Windows x64
-    dotnet publish FileCollector/FileCollector.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+    # Example for Windows x64:
+    dotnet publish FileCollector/FileCollector.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true
 
-    # For Linux x64
-    dotnet publish FileCollector/FileCollector.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
+    # Example for Linux x64:
+    dotnet publish FileCollector/FileCollector.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true
 
-    # For macOS x64 (Intel)
-    dotnet publish FileCollector/FileCollector.csproj -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true
+    # Example for macOS x64 (Intel):
+    dotnet publish FileCollector/FileCollector.csproj -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true
 
-    # For macOS ARM64 (Apple Silicon - M1/M2/M3)
-    # dotnet publish FileCollector/FileCollector.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true
+    # Example for macOS ARM64 (Apple Silicon - M1/M2/M3):
+    # dotnet publish FileCollector/FileCollector.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true
     ```
-    The published application will be located in the `bin/Release/net9.0/<runtime-identifier>/publish/` directory. The `-p:PublishSingleFile=true` flag attempts to create a single executable.
+    The published application will be in `FileCollector/bin/Release/net9.0/<runtime-identifier>/publish/`.
+    *   `--self-contained true`: Bundles the .NET runtime with your app.
+    *   `-p:PublishSingleFile=true`: Creates a single executable (may require `IncludeAllContentForSelfExtract` on some platforms/versions for assets).
+    *   `-p:IncludeAllContentForSelfExtract=true`: Ensures assets like `wwwroot` are bundled into the single executable.
 
 ## How to Use
 
 1.  **Launch File Collector:** Run the application executable.
-2.  **Select Root Folder:** Click the "Select Root Folder" button. A dialog will appear, allowing you to choose the main directory you want to work with.
-3.  **Navigate and Select:**
-    *   The file tree of the selected folder will appear in the left-hand panel.
-    *   Click the expander icons (▶ or ▼) next to directories to show or hide their contents.
-    *   Use the checkboxes to select files or entire directories. Files within selected directories (that are not ignored) will be included.
-    *   The "Selected Files" list below the tree shows a count and names of only the *individual files* selected for merging.
-4.  **Configure Settings (Optional but Recommended):**
-    *   Click the "Settings" icon in the sidebar to navigate to the settings page.
+2.  **Select Root Folder:** Click "Select Root Folder". A system dialog will prompt you to choose the main directory for your work.
+3.  **Navigate and Select Files/Folders:**
+    *   The file tree of the selected folder populates the left panel.
+    *   Use expander icons (▶ or ▼) next to directories to toggle visibility of their contents.
+    *   Utilize checkboxes to select files or entire directories. Files within selected directories (if not ignored) are automatically included.
+    *   The "Selected Files" list (below the tree) shows a count and names of only the *individual files* marked for merging.
+4.  **Configure Global Settings (Optional but Recommended):**
+    *   Access the "Settings" page via the sidebar.
     *   **Ignore Patterns:** Add or remove patterns (e.g., `obj/`, `*.tmp`, `!src/important.cs`). You can also paste content from a `.gitignore` file or upload one.
-    *   **Prompts:** Set a "Pre-Prompt" (text before all files) and/or a "Post-Prompt" (text after all files, before the User Prompt).
-    *   Click **"Save All Settings"** to persist your changes.
-5.  **Add a User Prompt (Optional):**
-    *   Back on the main page, in the "Merged Content" panel, you can type a "User Prompt". This prompt is temporary and applies only to the current session. It's inserted after all file content and the Post-Prompt.
-    *   The merged content will automatically refresh shortly after you stop typing in this field.
-6.  **Generate Merged Content:**
-    *   If you've made changes to selections or settings and auto-refresh hasn't triggered, click the "Refresh" button in the "Merged Content" panel.
-7.  **Review and Copy:**
-    *   The right-hand panel will display the merged content, with syntax highlighting for supported file types. Each file's content is clearly marked with its path.
-    *   If any files couldn't be read, an error message will be shown in their place.
-    *   Click the "Copy" button to copy the entire plain text content to your clipboard. A confirmation message ("Copied!") will briefly appear.
-8.  **Clear Selections:**
-    *   Use the "Clear Selection" button to deselect all items in the file tree.
+    *   **Prompts:** Define a "Pre-Prompt" (text prepended to all files) and/or a "Post-Prompt" (text appended after all files, before the User Prompt).
+    *   Click **"Save All Settings"** to persist these configurations.
+5.  **Manage Contexts (Optional):**
+    *   On the main page, use the "Saved Contexts" section to save the current root folder and selected files under a specific name.
+    *   Later, you can quickly load a saved context to restore that selection state.
+6.  **Add a User Prompt (Optional, Session-Specific):**
+    *   On the main page, within the "Merged Content" panel, type a "User Prompt". This prompt is temporary and applies only to the current session. It is inserted after all file content and the Post-Prompt.
+    *   The merged content view refreshes automatically shortly after you stop typing in this field.
+7.  **Generate/Refresh Merged Content:**
+    *   If auto-refresh hasn't triggered after selection changes or settings modifications, click the "Refresh" button in the "Merged Content" panel.
+8.  **Review and Copy Output:**
+    *   The right-hand panel displays the syntax-highlighted merged content. Each file's content is clearly demarcated by its relative path.
+    *   If any files were unreadable, an error message will appear in their place.
+    *   Click "Copy" to transfer the entire plain text content to your clipboard. A "Copied!" confirmation will briefly appear.
+9.  **Clear Selections:**
+    *   Use the "Clear Selection" button to deselect all items in the file tree and reset the merged content view.
 
 ## Configuration Details
 
-### Application Settings
+### Application Settings (`appsettings.json`)
 
-File Collector stores its persistent settings in an `appsettings.json` file, typically located in the same directory as the application executable (or `AppContext.BaseDirectory`). This includes:
+File Collector stores persistent settings in an `appsettings.json` file, typically located in `AppContext.BaseDirectory` (usually the application's executable directory). This JSON file includes:
 
-*   `IgnorePatterns`: A list of strings for filtering files.
-*   `PrePrompt`: Text to prepend to the merged output.
-*   `PostPrompt`: Text to append to the merged output (before the User Prompt).
+*   `AppSettings`:
+    *   `IgnorePatterns`: An array of strings for filtering files (e.g., `["bin/", "obj/", "*.log"]`).
+    *   `PrePrompt`: A string for text to prepend to the merged output.
+    *   `PostPrompt`: A string for text to append (before User Prompt).
+    *   `SavedContexts`: An array of objects, each representing a saved selection context (root path and selected file paths).
 
-These settings are manageable through the "Settings" UI within the application.
+These settings are primarily managed through the "Settings" UI and "Saved Contexts" UI within the application.
 
-### Ignore Patterns
+### Ignore Patterns Explained
 
-The ignore patterns feature is crucial for tailoring the file collection process. It uses a syntax similar to `.gitignore`. Here's a quick rundown:
+The ignore pattern system is essential for tailoring file collection. It closely follows `.gitignore` syntax:
 
-*   **Blank lines or lines starting with `#`** are ignored (comments).
-*   **Standard Patterns:**
-    *   `*.log` ignores all files ending with `.log`.
-    *   `temp/` ignores any directory named `temp` and all its contents, at any level.
-    *   `/temp/` ignores a `temp` directory only at the root of your selected folder.
-    *   `docs/*.md` ignores all Markdown files directly within a `docs` directory.
-*   **Directory Separators:** Always use forward slashes (`/`) in patterns, even on Windows. The application normalizes paths internally.
-*   **Negation:** A pattern starting with `!` negates the pattern. Any file matching a negated pattern will be included even if it was excluded by a previous pattern.
+*   **Comments:** Blank lines or lines starting with `#` are ignored.
+*   **Basic Patterns:**
+    *   `*.log`: Ignores all files ending with `.log`.
+    *   `temp/`: Ignores any directory named `temp` and all its contents, at any level.
+    *   `/temp/`: Ignores a `temp` directory *only* at the root of your selected folder.
+    *   `docs/*.md`: Ignores all Markdown files directly within any `docs` directory.
+*   **Directory Separators:** Always use forward slashes (`/`) in patterns. The application normalizes paths internally.
+*   **Negation (`!`):** A pattern starting with `!` re-includes a file if it was excluded by a previous pattern. Order matters.
     *   Example:
         ```
-        *.tmp       # Ignore all .tmp files
-        !important.tmp # But include important.tmp
+        logs/
+        !logs/important.log
         ```
-*   **Matching Order:** The order of patterns matters. Later patterns can override earlier ones (especially with negation).
-*   **Pattern Specificity:**
+*   **Double Asterisk (`**`):**
+    *   `**/foo`: Matches `foo` in any subdirectory.
+    *   `abc/**`: Matches everything inside `abc/`, recursively.
+    *   `a/**/b`: Matches files or directories `b` anywhere inside `a`, with any number of intermediate directories.
+*   **Pattern Specificity & Anchoring:**
     *   `foo`: Ignores files or directories named `foo` anywhere.
-    *   `/foo`: Ignores a file or directory named `foo` only at the root.
-    *   `foo/`: Ignores directories named `foo` anywhere (and their contents).
-    *   `foo/*`: Ignores all files and directories directly inside any directory named `foo`.
+    *   `/foo`: Ignores `foo` only at the root of the selected folder.
+    *   `foo/`: Specifically targets directories named `foo` (and their contents).
+    *   `foo/*`: Ignores all files and directories *directly* inside any directory named `foo`, but not `foo` itself.
 
-The filtering logic aims to replicate common `.gitignore` behavior.
+The filtering logic diligently attempts to replicate common `.gitignore` behavior to provide a familiar and powerful exclusion mechanism.
+
+## Known Issues & Limitations
+
+*   **Large Number of Files:** Performance might degrade when selecting a root folder containing an exceptionally large number of files and directories (e.g., hundreds of thousands) during initial tree loading and filtering.
+*   **Extremely Large Individual Files:** Merging very large individual files (e.g., >50MB) might impact UI responsiveness during content loading and highlighting. The primary use case is for text-based source code and documents.
+*   **Binary File Content:** While binary files can be selected, their content will be displayed as-is (or with read errors if unreadable as text), which may not be useful in the merged output. Syntax highlighting will not apply.
+*   **Photino Dialogs:** System dialogs (folder picker) are basic and provided by Photino. Advanced dialog features are not available.
+*   **Symlink Behavior:** Behavior with complex symbolic link structures (especially loops or links outside the primary selected path) might vary and is not extensively tested. Standard symlinks to files/directories within the selected scope should generally work.
+
+## Future Enhancements
+
+We are considering several enhancements for future releases:
+
+*   **Advanced Search/Filter in File Tree:** Allow users to quickly find specific files or filter the tree view by name or extension.
+*   **Drag & Drop Root Folder Selection:** Implement drag-and-drop functionality to set the root folder.
+*   **Multiple Root Folder Support:** Allow users to add and manage selections from multiple, disparate root folders simultaneously.
+*   **Customizable File Delimiters:** Provide options to change the format of `// File:` and `// End of file:` comments.
+*   **Token Count Estimation:** Display an estimated token count for the merged content, useful for LLM context limits.
+*   **Export/Import of `appsettings.json`:** Allow users to back up and restore their complete application configuration.
+*   **More Robust `.gitignore` Parsing:** Continuously refine the ignore pattern engine for even closer parity with complex `git` behaviors.
+*   **Accessibility Improvements:** Ongoing review and enhancements for WCAG compliance.
 
 ## Contributing
 
-We welcome contributions to File Collector! Whether it's a bug fix, a new feature, or documentation improvement, your help is appreciated.
+Contributions are highly welcome! Whether it's bug fixes, feature implementations, or documentation improvements, your input is valuable.
 
-1.  **Fork the Repository:** Click the 'Fork' button at the top right of this page.
+1.  **Fork the Repository:** Click 'Fork' on the GitHub page.
 2.  **Clone Your Fork:** `git clone https://github.com/YOUR_USERNAME/FileCollector.git`
-3.  **Create a Branch:** `git checkout -b feature/my-awesome-feature` or `bugfix/address-that-bug`
-4.  **Make Your Changes:** Implement your feature or bug fix.
-5.  **Commit Your Changes:** `git commit -am 'Add: My awesome feature'`
-6.  **Push to Your Branch:** `git push origin feature/my-awesome-feature`
-7.  **Open a Pull Request:** Go to the original repository on GitHub and open a new pull request from your forked branch.
+3.  **Create a Feature/Bugfix Branch:** `git checkout -b feature/your-great-idea` or `bugfix/fix-that-issue`
+4.  **Implement Changes:** Write your code and ensure it adheres to existing project style.
+5.  **Commit Changes:** `git commit -m "Add: Brief description of your change"`
+6.  **Push to Your Branch:** `git push origin feature/your-great-idea`
+7.  **Open a Pull Request:** Submit a PR against the `main` branch of the original `lorenzodimauro97/FileCollector` repository.
 
-Please ensure your code follows the existing project structure and coding style. If you're adding a new feature, consider adding tests if applicable.
+Please provide a clear description of your changes in the pull request. For new features, consider if unit tests are applicable.
 
 ## License
 
