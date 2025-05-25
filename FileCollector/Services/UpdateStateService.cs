@@ -37,9 +37,19 @@ public class UpdateStateService
 
     public void SetProgress(double progress, string? message = null)
     {
-        Progress = Math.Clamp(progress, 0, 100);
-        StatusMessage = message ?? StatusMessage;
-        NotifyStateChanged();
+        var newProgress = Math.Clamp(progress, 0, 100);
+
+        if (Math.Abs(Progress - newProgress) > 0.01 || StatusMessage != message)
+        {
+            Progress = newProgress;
+            StatusMessage = message ?? StatusMessage;
+            NotifyStateChanged();
+        }
+        else if (message != null && StatusMessage != message)
+        {
+            StatusMessage = message;
+            NotifyStateChanged();
+        }
     }
     
     public void SetError(string errorMessage)

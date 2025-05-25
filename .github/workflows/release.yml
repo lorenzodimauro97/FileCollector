@@ -1,5 +1,8 @@
 name: Build and Release FileCollector
 
+env:
+  MAJOR_MINOR_VERSION: "1.0" # Define base major.minor version
+
 on:
   push:
     branches:
@@ -37,11 +40,17 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Determine Application Version
+        id: versioner
+        run: echo "app_version=${{ env.MAJOR_MINOR_VERSION }}.${{ github.run_number }}.${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+
       - name: Restore dependencies
         run: dotnet restore FileCollector/FileCollector.csproj
 
       - name: Publish application
-        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=false /p:DebugType=None /p:PublishTrimmed=false /p:PublishReadyToRun=false -o ./publish_output # <--- MODIFIED HERE
+        run: |
+          echo "Publishing application version: ${{ steps.versioner.outputs.app_version }}"
+          dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=false /p:DebugType=None /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:Version=${{ steps.versioner.outputs.app_version }} /p:InformationalVersion=${{ steps.versioner.outputs.app_version }} -o ./publish_output
 
       - name: List publish_output contents (Diagnostics)
         if: runner.os == 'Windows'
@@ -76,9 +85,13 @@ jobs:
       contents: write
 
     steps:
-      - name: Generate tag name
-        id: tagger
-        run: echo "tag_name=v${{ github.run_id }}.${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+      - name: Generate Release Info
+        id: release_info
+        run: |
+          APP_VERSION="${{ env.MAJOR_MINOR_VERSION }}.${{ github.run_number }}.${{ github.run_attempt }}"
+          echo "tag_name=v${APP_VERSION}" >> $GITHUB_OUTPUT
+          echo "app_version_for_display=${APP_VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=Release v${APP_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -93,10 +106,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.tagger.outputs.tag_name }}
-          name: Release ${{ steps.tagger.outputs.tag_name }}
+          tag_name: ${{ steps.release_info.outputs.tag_name }}
+          name: ${{ steps.release_info.outputs.release_name }}
           body: |
             Automated release for commit ${{ github.sha }}.
+            Application version: ${{ steps.release_info.outputs.app_version_for_display }}
             Builds for Windows, macOS, and Linux are attached.
           draft: false
           prerelease: false

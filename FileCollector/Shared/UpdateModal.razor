@@ -2,7 +2,7 @@
 @inject UpdateService UpdateSvc
 @implements IAsyncDisposable
 
-@if (UpdateStateSvc.CurrentState != UpdateProcessState.Idle || _forceShowAfterUserCheck)
+@if (_showModal)
 {
     <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);" role="dialog">
         <div class="modal-dialog modal-dialog-centered" role="document">
@@ -24,7 +24,7 @@
                     </h5>
                     @if (CanCloseModal())
                     {
-                        <button type="button" class="btn-close" @onclick="DismissModal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" @onclick="HandleDismissClicked" aria-label="Close"></button>
                     }
                 </div>
                 <div class="modal-body">
@@ -43,7 +43,7 @@
                             <li><strong>Published:</strong> @UpdateStateSvc.AvailableUpdateInfo.PublishedAt.ToString("g")</li>
                         </ul>
 
-                        if (!string.IsNullOrWhiteSpace(UpdateStateSvc.AvailableUpdateInfo.Body))
+                        @if (!string.IsNullOrWhiteSpace(UpdateStateSvc.AvailableUpdateInfo.Body))
                         {
                             <h6>Release Notes:</h6>
                             <div class="release-notes scrollable-area-sm" style="max-height: 150px; background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">
@@ -70,7 +70,7 @@
                 <div class="modal-footer">
                     @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable)
                     {
-                        <button type="button" class="btn btn-light" @onclick="DismissModal">Later</button>
+                        <button type="button" class="btn btn-light" @onclick="HandleLaterClicked">Later</button>
                         <button type="button" class="btn btn-primary" @onclick="StartUpdateProcessAsync">
                             <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Class="me-1" /> Update and Restart
                         </button>
@@ -79,9 +79,9 @@
                     {
                          <button type="button" class="btn btn-primary" disabled>Closing...</button>
                     }
-                    else if (CanCloseModal())
+                    else if (CanCloseModal()) // For Error, Idle (after manual check), etc.
                     {
-                        <button type="button" class="btn btn-primary" @onclick="DismissModalAndReset">OK</button>
+                        <button type="button" class="btn btn-primary" @onclick="HandleOkClicked">OK</button>
                     }
                 </div>
             </div>
@@ -91,15 +91,17 @@
 
 @code {
     private bool _isCheckingManually = false;
-    private bool _forceShowAfterUserCheck = false;
+    private bool _forceShowAfterUserCheck = false; // True if manual check initiated, to show "up to date" or error
     private string _currentAppVersion = "N/A";
+    private bool _showModal = false; // New state variable to control modal visibility directly
 
     protected override async Task OnInitializedAsync()
     {
         UpdateStateSvc.OnUpdateStateChangedAsync += HandleUpdateStateChangedAsync;
         _currentAppVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "N/A";
+        UpdateModalVisibility(); // Initial check
 
-        var appSettings = await UpdateSvc._settingsService.GetAppSettingsAsync(); // Friend access for demo
+        var appSettings = await UpdateSvc._settingsService.GetAppSettingsAsync();
         if (appSettings.Update.CheckForUpdatesOnStartup)
         {
             _ = UpdateSvc.CheckForUpdatesAsync();
@@ -108,15 +110,22 @@
 
     private async Task HandleUpdateStateChangedAsync()
     {
-        if (UpdateStateSvc.CurrentState == UpdateProcessState.Idle && _isCheckingManually)
-        {
-            _forceShowAfterUserCheck = true; // Keep modal open to show "up to date" message
-        }
-        else if (UpdateStateSvc.CurrentState != UpdateProcessState.Idle)
-        {
-            _forceShowAfterUserCheck = false; // Let normal logic take over
-        }
+        UpdateModalVisibility();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateModalVisibility()
+    {
+        // Determine if the modal should be shown
+        if (UpdateStateSvc.CurrentState == UpdateProcessState.Idle)
+        {
+            _showModal = _forceShowAfterUserCheck; // Show if manual check just finished (e.g. "up to date")
+        }
+        else
+        {
+            // Show for any other non-idle state (UpdateAvailable, Downloading, Error, etc.)
+            _showModal = true;
+        }
     }
 
     private bool CanCloseModal()
@@ -130,32 +139,50 @@
         };
     }
     
-    private void DismissModal()
+    private void HandleDismissClicked() // For the 'X' button
     {
-        if (CanCloseModal())
+        if (!CanCloseModal()) return;
+
+        if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable)
         {
-            if (_isCheckingManually && UpdateStateSvc.CurrentState == UpdateProcessState.Idle)
-            {
-                 // User initiated check, and it's up to date or error handled by status message
-            }
+            // If user dismisses "UpdateAvailable" with X, treat it like "Later"
+            // The state remains UpdateAvailable, but modal hides. It will reappear if state changes.
+            _showModal = false;
+        }
+        else // For Error, Idle (after manual check)
+        {
+            UpdateStateSvc.ResetState(); // Reset state fully
             _forceShowAfterUserCheck = false;
             _isCheckingManually = false;
-            // Don't reset state here, might be background check still.
-            // If user clicks "Later" on UpdateAvailable, state remains UpdateAvailable.
-            StateHasChanged();
+            _showModal = false;
         }
+        StateHasChanged();
     }
 
-    private void DismissModalAndReset()
+    private void HandleLaterClicked() // For "Later" button on UpdateAvailable
     {
-        DismissModal();
-        UpdateStateSvc.ResetState(); // Full reset if user clicks OK on an error or info message
+        // State remains UpdateAvailable, but modal hides.
+        // It will reappear if state changes or if app restarts and checks again.
+        _showModal = false;
+        _forceShowAfterUserCheck = false; // No longer forcing show for this interaction
+        _isCheckingManually = false;
+        StateHasChanged();
+    }
+    
+    private void HandleOkClicked() // For "OK" button on Error, Idle (after manual check)
+    {
+        UpdateStateSvc.ResetState(); // Reset state fully
+        _forceShowAfterUserCheck = false;
+        _isCheckingManually = false;
+        _showModal = false;
+        StateHasChanged();
     }
 
     private async Task StartUpdateProcessAsync()
     {
         _isCheckingManually = false;
         _forceShowAfterUserCheck = false;
+        // _showModal will be updated by HandleUpdateStateChangedAsync when state changes to Downloading etc.
         await UpdateSvc.DownloadAndApplyUpdateAsync();
     }
 
@@ -163,6 +190,7 @@
     {
         _isCheckingManually = true;
         _forceShowAfterUserCheck = true; // Ensure modal shows for manual check result
+        // _showModal will be updated by HandleUpdateStateChangedAsync
         await UpdateSvc.CheckForUpdatesAsync(initiatedByUser: true);
     }
 
