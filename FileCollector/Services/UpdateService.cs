@@ -1,16 +1,14 @@
-﻿// File: C:\Users\Administrator\RiderProjects\FileCollector\FileCollector\Services\UpdateService.cs
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using FileCollector.Models; // Ensure this is present for LargeVersion
+using FileCollector.Models;
 using FileCollector.Services.Settings;
 using Microsoft.Extensions.Logging;
 using Photino.NET;
@@ -67,8 +65,9 @@ public class UpdateService
         }
         else
         {
-            _logger.LogWarning("Unsupported OS platform for update asset determination: {OSPlatform}", RuntimeInformation.OSDescription);
-            return $"{AppNamePrefix}-unknown-platform{".zip"}"; 
+            _logger.LogWarning("Unsupported OS platform for update asset determination: {OSPlatform}",
+                RuntimeInformation.OSDescription);
+            return $"{AppNamePrefix}-unknown-platform{".zip"}";
         }
 
         switch (RuntimeInformation.ProcessArchitecture)
@@ -80,10 +79,13 @@ public class UpdateService
                 archPart = "arm64";
                 break;
             default:
-                _logger.LogWarning("Unsupported process architecture for update asset determination: {ProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
+                _logger.LogWarning(
+                    "Unsupported process architecture for update asset determination: {ProcessArchitecture}",
+                    RuntimeInformation.ProcessArchitecture);
                 archPart = "unknownarch";
                 break;
         }
+
         return $"{AppNamePrefix}-{osPart}-{archPart}{extension}";
     }
 
@@ -104,17 +106,18 @@ public class UpdateService
                 return;
             }
 
-            var requestUrl = $"https://api.github.com/repos/{appSettings.Update.GitHubRepoOwner}/{appSettings.Update.GitHubRepoName}/releases/latest";
+            var requestUrl =
+                $"https://api.github.com/repos/{appSettings.Update.GitHubRepoOwner}/{appSettings.Update.GitHubRepoName}/releases/latest";
             var latestRelease = await _httpClient.GetFromJsonAsync<GitHubReleaseInfo>(requestUrl);
 
             if (latestRelease == null || string.IsNullOrWhiteSpace(latestRelease.TagName))
             {
                 _logger.LogInformation("No latest release found or release tag is empty.");
-                _updateStateService.SetState(UpdateProcessState.Idle, initiatedByUser ? "You are on the latest version." : null);
+                _updateStateService.SetState(UpdateProcessState.Idle,
+                    initiatedByUser ? "You are on the latest version." : null);
                 return;
             }
 
-            // Get current version using LargeVersion
             LargeVersion? currentVersion;
             System.Version? systemVersion = Assembly.GetEntryAssembly()?.GetName().Version;
             if (systemVersion != null)
@@ -123,16 +126,15 @@ public class UpdateService
             }
             else
             {
-                // Fallback if assembly version is somehow not available
                 if (!LargeVersion.TryParse("0.0.0.0", out currentVersion))
                 {
-                     _logger.LogWarning("Could not parse fallback current application version '0.0.0.0'.");
+                    _logger.LogWarning("Could not parse fallback current application version '0.0.0.0'.");
                     _updateStateService.SetError("Could not determine current app version.");
                     return;
                 }
             }
-            
-            if (currentVersion == null) // Should not happen if TryParse fallback works
+
+            if (currentVersion == null)
             {
                 _logger.LogWarning("Could not determine current application version.");
                 _updateStateService.SetError("Could not determine current app version.");
@@ -141,33 +143,44 @@ public class UpdateService
 
 
             var latestVersionStringFromTag = latestRelease.TagName.TrimStart('v');
-            if (!LargeVersion.TryParse(latestVersionStringFromTag, out LargeVersion? latestVersion) || latestVersion == null)
+            if (!LargeVersion.TryParse(latestVersionStringFromTag, out LargeVersion? latestVersion) ||
+                latestVersion == null)
             {
-                _logger.LogWarning("Could not parse latest release version from tag: {TagName} (Raw: {RawTag})", latestVersionStringFromTag, latestRelease.TagName);
+                _logger.LogWarning("Could not parse latest release version from tag: {TagName} (Raw: {RawTag})",
+                    latestVersionStringFromTag, latestRelease.TagName);
                 _updateStateService.SetError($"Could not parse latest release version: {latestRelease.TagName}");
                 return;
             }
 
-            _logger.LogInformation("Current version: {CurrentVersion}, Latest GitHub release version: {LatestVersion}", currentVersion.ToString(), latestVersion.ToString());
+            _logger.LogInformation("Current version: {CurrentVersion}, Latest GitHub release version: {LatestVersion}",
+                currentVersion.ToString(), latestVersion.ToString());
 
             if (latestVersion.CompareTo(currentVersion) > 0)
             {
                 string expectedAssetName = GetPlatformSpecificAssetFileName();
-                var asset = latestRelease.Assets.FirstOrDefault(a => a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
+                var asset = latestRelease.Assets.FirstOrDefault(a =>
+                    a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
                 if (asset == null)
                 {
-                    _logger.LogWarning("New version {LatestVersion} available, but platform-specific asset '{ExpectedAssetName}' not found in release assets.", latestVersion.ToString(), expectedAssetName);
-                    _updateStateService.SetError($"Update for your platform ({expectedAssetName}) not found in version {latestVersion.ToString()}.");
+                    _logger.LogWarning(
+                        "New version {LatestVersion} available, but platform-specific asset '{ExpectedAssetName}' not found in release assets.",
+                        latestVersion.ToString(), expectedAssetName);
+                    _updateStateService.SetError(
+                        $"Update for your platform ({expectedAssetName}) not found in version {latestVersion.ToString()}.");
                     return;
                 }
 
-                _logger.LogInformation("New version available: {LatestVersion}. Asset found: {AssetName}", latestVersion.ToString(), asset.Name);
-                _updateStateService.SetState(UpdateProcessState.UpdateAvailable, $"New version {latestVersion.ToString()} ({asset.Name}) for your platform is available.", latestRelease);
+                _logger.LogInformation("New version available: {LatestVersion}. Asset found: {AssetName}",
+                    latestVersion.ToString(), asset.Name);
+                _updateStateService.SetState(UpdateProcessState.UpdateAvailable,
+                    $"New version {latestVersion.ToString()} ({asset.Name}) for your platform is available.",
+                    latestRelease);
             }
             else
             {
                 _logger.LogInformation("Application is up to date.");
-                _updateStateService.SetState(UpdateProcessState.Idle, initiatedByUser ? "You are on the latest version." : null);
+                _updateStateService.SetState(UpdateProcessState.Idle,
+                    initiatedByUser ? "You are on the latest version." : null);
             }
         }
         catch (HttpRequestException ex)
@@ -192,7 +205,8 @@ public class UpdateService
 
         var appSettings = await SettingsService.GetAppSettingsAsync();
         string expectedAssetName = GetPlatformSpecificAssetFileName();
-        var asset = _updateStateService.AvailableUpdateInfo.Assets.FirstOrDefault(a => a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
+        var asset = _updateStateService.AvailableUpdateInfo.Assets.FirstOrDefault(a =>
+            a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
 
         if (asset == null)
         {
@@ -201,7 +215,7 @@ public class UpdateService
         }
 
         var tempUpdateDir = Path.Combine(Path.GetTempPath(), UpdateTempSubFolder);
-        var downloadedZipPath = Path.Combine(tempUpdateDir, asset.Name); 
+        var downloadedZipPath = Path.Combine(tempUpdateDir, asset.Name);
         var extractionPath = Path.Combine(tempUpdateDir, "extracted");
 
         try
@@ -213,14 +227,16 @@ public class UpdateService
             Directory.CreateDirectory(tempUpdateDir);
             Directory.CreateDirectory(extractionPath);
 
-            using var response = await _httpClient.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead);
+            using var response =
+                await _httpClient.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
             long bytesRead = 0;
 
             using (var contentStream = await response.Content.ReadAsStreamAsync())
-            using (var fileStream = new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
+            using (var fileStream = new FileStream(downloadedZipPath, FileMode.Create, FileAccess.Write, FileShare.None,
+                       8192, true))
             {
                 var buffer = new byte[8192];
                 int bytesReadFromStream;
@@ -230,32 +246,36 @@ public class UpdateService
                     bytesRead += bytesReadFromStream;
                     if (totalBytes > 0)
                     {
-                        _updateStateService.SetProgress((double)bytesRead / totalBytes * 100, $"Downloading... {bytesRead / (1024*1024)}MB / {totalBytes / (1024*1024)}MB");
+                        _updateStateService.SetProgress((double)bytesRead / totalBytes * 100,
+                            $"Downloading... {bytesRead / (1024 * 1024)}MB / {totalBytes / (1024 * 1024)}MB");
                     }
                 }
             }
+
             _logger.LogInformation("Download complete: {DownloadedZipPath}", downloadedZipPath);
             _updateStateService.SetProgress(100, "Download complete.");
 
             _updateStateService.SetState(UpdateProcessState.Extracting, "Extracting update...");
-            
+
             if (asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
                 await Task.Run(() => ZipFile.ExtractToDirectory(downloadedZipPath, extractionPath, true));
             }
             else if (asset.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
             {
-                // Placeholder for .tar.gz extraction.
-                // For a full solution, use System.Formats.Tar and GZipStream.
-                _logger.LogWarning("Extraction of .tar.gz is not fully implemented in this example using System.Formats.Tar. The downloaded file is at {DownloadedFilePath}. Copying archive to extraction path.", downloadedZipPath);
+                _logger.LogWarning(
+                    "Extraction of .tar.gz is not fully implemented in this example using System.Formats.Tar. The downloaded file is at {DownloadedFilePath}. Copying archive to extraction path.",
+                    downloadedZipPath);
                 File.Copy(downloadedZipPath, Path.Combine(extractionPath, Path.GetFileName(downloadedZipPath)), true);
-                _logger.LogInformation("Non-zip asset {AssetName} copied to extraction path. Updater will need to handle actual extraction if this is an archive.", asset.Name);
+                _logger.LogInformation(
+                    "Non-zip asset {AssetName} copied to extraction path. Updater will need to handle actual extraction if this is an archive.",
+                    asset.Name);
             }
             else
             {
-                 _logger.LogError("Unknown archive type for asset: {AssetName}", asset.Name);
-                 _updateStateService.SetError($"Unknown archive type: {asset.Name}");
-                 return;
+                _logger.LogError("Unknown archive type for asset: {AssetName}", asset.Name);
+                _updateStateService.SetError($"Unknown archive type: {asset.Name}");
+                return;
             }
 
             _logger.LogInformation("Extraction/preparation complete to: {ExtractionPath}", extractionPath);
@@ -271,35 +291,72 @@ public class UpdateService
                 _logger.LogInformation("Backed up appsettings.json to {AppSettingsBackupPath}", appSettingsBackupPath);
             }
 
-            _updateStateService.SetState(UpdateProcessState.ReadyToApply, $"Update downloaded and prepared in: {extractionPath}. Ready to apply.");
+            _updateStateService.SetState(UpdateProcessState.ReadyToApply,
+                $"Update downloaded and prepared in: {extractionPath}. Ready to apply.");
 
-            var updaterExeName = appSettings.Update.UpdaterExecutableName;
-            var updaterSourcePath = Path.Combine(AppContext.BaseDirectory, updaterExeName);
-            
+            var baseUpdaterExeNameFromSettings = appSettings.Update.UpdaterExecutableName;
+            string actualUpdaterFileName;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                actualUpdaterFileName = Path.GetFileNameWithoutExtension(baseUpdaterExeNameFromSettings);
+            }
+            else
+            {
+                actualUpdaterFileName = baseUpdaterExeNameFromSettings;
+            }
+
+            var updaterSourcePath = Path.Combine(AppContext.BaseDirectory, actualUpdaterFileName);
+
             if (File.Exists(updaterSourcePath))
             {
-                var updaterTempPath = Path.Combine(tempUpdateDir, updaterExeName);
+                var updaterTempPath = Path.Combine(tempUpdateDir, actualUpdaterFileName);
                 File.Copy(updaterSourcePath, updaterTempPath, true);
-                _logger.LogInformation("Copied updater {UpdaterExeName} to {UpdaterTempPath}", updaterExeName, updaterTempPath);
+                _logger.LogInformation("Copied updater {UpdaterFileName} to {UpdaterTempPath}", actualUpdaterFileName,
+                    updaterTempPath);
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    File.SetUnixFileMode(updaterTempPath,
+                        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                        UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                        UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+                    _logger.LogInformation("Set execute permissions for {UpdaterTempPath} on Unix-like system.",
+                        updaterTempPath);
+                }
 
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = updaterTempPath,
-                    Arguments = $"\"{AppContext.BaseDirectory}\" \"{extractionPath}\" \"{Path.GetFileName(Process.GetCurrentProcess().MainModule?.FileName)}\" \"{appSettingsBackupPath}\"",
-                    UseShellExecute = true, 
+                    Arguments =
+                        $"\"{AppContext.BaseDirectory}\" \"{extractionPath}\" \"{Path.GetFileName(Process.GetCurrentProcess().MainModule?.FileName)}\" \"{appSettingsBackupPath}\"",
                     WorkingDirectory = tempUpdateDir
                 };
-                
-                _logger.LogInformation("Launching updater: {FileName} {Arguments}", processStartInfo.FileName, processStartInfo.Arguments);
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    processStartInfo.UseShellExecute = true;
+                }
+                else
+                {
+                    processStartInfo.UseShellExecute = false;
+                }
+
+                _logger.LogInformation("Launching updater: {FileName} {Arguments}", processStartInfo.FileName,
+                    processStartInfo.Arguments);
+                _logger.LogInformation("Updater UseShellExecute: {UseShellExecute}", processStartInfo.UseShellExecute);
                 Process.Start(processStartInfo);
-                _updateStateService.SetState(UpdateProcessState.Applying, "Updater launched. Application will now close.");
-                
-                await Task.Delay(1000); 
+                _updateStateService.SetState(UpdateProcessState.Applying,
+                    "Updater launched. Application will now close.");
+
+                await Task.Delay(1000);
                 _photinoWindowFactory().Close();
             }
             else
             {
-                var manualUpdateMessage = $"Updater '{updaterExeName}' not found. Update downloaded to '{extractionPath}'. Please close the application and manually copy files. Your settings have been backed up to '{appSettingsBackupPath}'.";
+                var manualUpdateMessage =
+                    $"Updater '{actualUpdaterFileName}' not found at '{updaterSourcePath}'. Update downloaded to '{extractionPath}'. Please close the application and manually copy files. Your settings have been backed up to '{appSettingsBackupPath}'.";
                 _logger.LogWarning(manualUpdateMessage);
                 _updateStateService.SetState(UpdateProcessState.ReadyToApply, manualUpdateMessage);
             }
@@ -310,7 +367,13 @@ public class UpdateService
             _updateStateService.SetError($"Error applying update: {ex.Message}");
             if (Directory.Exists(tempUpdateDir))
             {
-                try { Directory.Delete(tempUpdateDir, true); } catch { /* best effort */ }
+                try
+                {
+                    Directory.Delete(tempUpdateDir, true);
+                }
+                catch
+                {
+                }
             }
         }
     }
