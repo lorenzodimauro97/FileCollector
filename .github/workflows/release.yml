@@ -41,7 +41,7 @@ jobs:
         run: dotnet restore FileCollector/FileCollector.csproj
 
       - name: Publish application
-        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=true /p:DebugType=portable /p:PublishTrimmed=false -o ./publish_output
+        run: dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=false /p:DebugType=portable /p:PublishTrimmed=false /p:PublishReadyToRun=false -o ./publish_output
 
       - name: List publish_output contents (Diagnostics)
         if: runner.os == 'Windows'
