@@ -66,13 +66,14 @@
 			<!-- $(BaseIntermediateOutputPath) is typically obj/$(Configuration)/$(TargetFramework)/ -->
 		</PropertyGroup>
 
-		<Message Text="Publishing FileCollector.Updater to intermediate location: $(_UpdaterIntermediatePublishDir)" Importance="high" />
+		<Message Text="Publishing FileCollector.Updater to intermediate location: $(_UpdaterIntermediatePublishDir) with Version: $(Version)" Importance="high" />
 		<!-- Use MSBuild task to publish the updater project -->
 		<MSBuild Projects="$(_UpdaterProjectFullPath)"
 				 Targets="Publish"
-				 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);PublishDir=$(_UpdaterIntermediatePublishDir);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=false" />
+				 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);PublishDir=$(_UpdaterIntermediatePublishDir);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=false;Version=$(Version);InformationalVersion=$(InformationalVersion);AssemblyVersion=$(AssemblyVersion);FileVersion=$(FileVersion)" />
 		<!-- SelfContained=false for updater, assuming .NET 9 runtime is available via main app -->
 		<!-- Pass RuntimeIdentifier from main app's build/publish process -->
+		<!-- Pass Version properties from main app's build/publish process -->
 
 		<ItemGroup>
 			<!-- Collect all files from the updater's intermediate publish directory -->

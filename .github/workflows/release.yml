@@ -42,7 +42,11 @@ jobs:
 
       - name: Determine Application Version
         id: versioner
-        run: echo "app_version=${{ env.MAJOR_MINOR_VERSION }}.${{ github.run_number }}.${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        run: |
+          $AppVersion = "${{ env.MAJOR_MINOR_VERSION }}.${{ github.run_number }}.${{ github.run_attempt }}"
+          echo "Determined application version: $AppVersion"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "app_version=$AppVersion"
+        shell: pwsh
 
       - name: Restore dependencies
         run: dotnet restore FileCollector/FileCollector.csproj
@@ -51,6 +55,7 @@ jobs:
         run: |
           echo "Publishing application version: ${{ steps.versioner.outputs.app_version }}"
           dotnet publish FileCollector/FileCollector.csproj -c Release -r ${{ matrix.rid }} --self-contained true /p:PublishSingleFile=false /p:DebugType=None /p:PublishTrimmed=false /p:PublishReadyToRun=false /p:Version=${{ steps.versioner.outputs.app_version }} /p:InformationalVersion=${{ steps.versioner.outputs.app_version }} -o ./publish_output
+        shell: pwsh # Explicitly use pwsh for consistency, especially with multi-line scripts
 
       - name: List publish_output contents (Diagnostics)
         if: runner.os == 'Windows'
@@ -70,6 +75,7 @@ jobs:
       - name: Archive output (macOS/Linux)
         if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
         run: tar -czvf ./${{ matrix.output-archive-name }} -C ./publish_output .
+        shell: bash # tar is a bash command
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -79,7 +85,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # This job uses bash by default
     needs: build
     permissions:
       contents: write
@@ -92,6 +98,7 @@ jobs:
           echo "tag_name=v${APP_VERSION}" >> $GITHUB_OUTPUT
           echo "app_version_for_display=${APP_VERSION}" >> $GITHUB_OUTPUT
           echo "release_name=Release v${APP_VERSION}" >> $GITHUB_OUTPUT
+        # shell: bash # Default on ubuntu-latest
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -100,6 +107,7 @@ jobs:
 
       - name: List downloaded files (for verification)
         run: ls -R .
+        # shell: bash # Default on ubuntu-latest
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
