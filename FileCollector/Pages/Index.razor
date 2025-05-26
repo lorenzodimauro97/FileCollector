@@ -216,6 +216,7 @@
                         <span class="spinner-border spinner-border-sm ms-2" role="status"
                               aria-hidden="true"></span>
                     }
+                    <span class="ms-2 small text-muted">~@_mergedContentTokenCount tokens</span>
                 </h4>
                 <div class="d-flex align-items-center">
                     <button class="btn btn-light me-2" @onclick="GenerateMergedContentAsync"
@@ -325,6 +326,7 @@
 
     private List<MergedFileDisplayItem> _mergedFilesToDisplay = [];
     private string _mergedFileContentPlainText = "";
+    private int _mergedContentTokenCount;
     private bool _isMergingContent;
     private string _mergeErrorMessage = "";
 
@@ -423,6 +425,7 @@
 
         _mergedFilesToDisplay.Clear();
         _mergedFileContentPlainText = "";
+        _mergedContentTokenCount = 0;
         _mergeErrorMessage = "";
 
         await InvokeAsync(StateHasChanged);
@@ -595,6 +598,7 @@
         _selectedFilePaths.Clear();
         _mergedFilesToDisplay.Clear();
         _mergedFileContentPlainText = "";
+        _mergedContentTokenCount = 0;
         _mergeErrorMessage = "";
         _isMergingContent = false;
         _contextStatusMessage = "";
@@ -658,6 +662,7 @@
             string.IsNullOrWhiteSpace(_appSettings.PostPrompt))
         {
             _mergedFileContentPlainText = "";
+            _mergedContentTokenCount = 0;
             _isMergingContent = false;
             await InvokeAsync(StateHasChanged);
             return;
@@ -667,6 +672,7 @@
 
         _mergedFilesToDisplay = result.MergedFilesToDisplay;
         _mergedFileContentPlainText = result.MergedFileContentPlainText;
+        _mergedContentTokenCount = result.EstimatedTokenCount;
         _mergeErrorMessage = result.ErrorMessage;
 
         _isMergingContent = false;

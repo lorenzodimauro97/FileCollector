@@ -20,6 +20,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
     {
         public List<MergedFileDisplayItem> MergedFilesToDisplay { get; init; } = [];
         public string MergedFileContentPlainText { get; init; } = "";
+        public int EstimatedTokenCount { get; init; }
         public string ErrorMessage { get; init; } = "";
     }
 
@@ -116,6 +117,10 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
             });
             AppendSectionToPlainText(sbPlainText, "Post-Prompt", appSettings.PostPrompt);
         }
+        
+        string finalPlainTextContent = sbPlainText.ToString().TrimEnd();
+        int estimatedTokenCount = finalPlainTextContent.Length / 4;
+
 
         if (fileNodesToProcess.Count == 0 &&
             string.IsNullOrWhiteSpace(appSettings.PrePrompt) &&
@@ -123,13 +128,14 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
             string.IsNullOrWhiteSpace(appSettings.PostPrompt))
         {
             return new MergedContentResult
-                { MergedFileContentPlainText = "", MergedFilesToDisplay = [], ErrorMessage = overallErrorMessage };
+                { MergedFileContentPlainText = "", EstimatedTokenCount = 0, MergedFilesToDisplay = [], ErrorMessage = overallErrorMessage };
         }
 
         return new MergedContentResult
         {
             MergedFilesToDisplay = mergedFilesToDisplay,
-            MergedFileContentPlainText = sbPlainText.ToString().TrimEnd(),
+            MergedFileContentPlainText = finalPlainTextContent,
+            EstimatedTokenCount = estimatedTokenCount,
             ErrorMessage = overallErrorMessage
         };
     }
