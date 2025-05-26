@@ -44,15 +44,36 @@
     </div>
 </div>
 
+<div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="includeFileTreeCheckbox"
+           checked="@IncludeFileTreeInOutput"
+           @onchange="HandleIncludeFileTreeChanged"
+           disabled="@(IsMergingContent || string.IsNullOrEmpty(CurrentDisplayRootPath))">
+    <label class="form-check-label small" for="includeFileTreeCheckbox">
+        Include full file/folder tree in output
+    </label>
+</div>
+
 @code {
     [Parameter] public bool IsMergingContent { get; set; }
     [Parameter] public int MergedContentTokenCount { get; set; }
-    [Parameter] public bool CanGenerateOrCopy { get; set; } // True if plain text is not empty and files are selected
+    [Parameter] public bool CanGenerateOrCopy { get; set; }
     [Parameter] public string MergeErrorMessage { get; set; } = "";
     [Parameter] public string UserPromptValue { get; set; } = "";
+    [Parameter] public bool IncludeFileTreeInOutput { get; set; }
+    [Parameter] public string? CurrentDisplayRootPath { get; set; }
 
     [Parameter] public EventCallback OnGenerateMergedContentClicked { get; set; }
     [Parameter] public EventCallback OnCopyMergedContentToClipboardClicked { get; set; }
     [Parameter] public EventCallback<ChangeEventArgs> OnUserPromptInputChanged { get; set; }
     [Parameter] public EventCallback OnClearUserPromptClicked { get; set; }
+    [Parameter] public EventCallback<bool> OnIncludeFileTreeInOutputChanged { get; set; }
+
+    private async Task HandleIncludeFileTreeChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool val)
+        {
+            await OnIncludeFileTreeInOutputChanged.InvokeAsync(val);
+        }
+    }
 }

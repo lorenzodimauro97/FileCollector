@@ -4,11 +4,14 @@
         @foreach (var node in SelectedFileNodes)
         {
             <div class="list-group-item list-group-item-action d-flex align-items-center py-1 px-2">
+                @{
+                    var (icon, color) = IconHelper.GetIconForItem(node.Name, node.IsDirectory, node.IsExpanded);
+                }
                 <TablerIcon
-                    OutlineIcon="@IconHelper.GetIconForItem(node.Name, node.IsDirectory, node.IsExpanded)"
+                    OutlineIcon="@icon"
                     Size="18px"
                     Class="me-2 flex-shrink-0"
-                    Color="@(node.IsDirectory ? "var(--app-primary-color)" : "var(--text-color)")"/>
+                    Color="@color"/>
                 <span class="text-truncate" title="@node.FullPath">@node.Name</span>
             </div>
         }

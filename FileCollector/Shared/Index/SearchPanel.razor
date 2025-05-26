@@ -28,11 +28,14 @@ else if (SearchResults.Any())
                 <input type="checkbox" class="form-check-input me-2" style="flex-shrink: 0;"
                        checked="@node.IsSelected"
                        @onchange="async (ChangeEventArgs e) => await HandleSearchResultSelectionChanged(node, (bool)e.Value!)"/>
+                @{
+                    var (icon, color) = IconHelper.GetIconForItem(node.Name, false, false);
+                }
                 <TablerIcon
-                    OutlineIcon="@IconHelper.GetIconForItem(node.Name, false, false)"
+                    OutlineIcon="@icon"
+                    Color="@color"
                     Size="18px"
-                    Class="me-2 flex-shrink-0"
-                    Color="var(--text-color)"/>
+                    Class="me-2 flex-shrink-0"/>
                 <span class="text-truncate" title="@node.FullPath">@node.Name</span>
                 @{
                     var relativePath = node.FullPath;

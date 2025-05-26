@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,7 +29,9 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         IEnumerable<FileSystemItem> filesToMerge,
         AppSettings appSettings,
         string userPrompt,
-        string? currentDisplayRootPath)
+        string? currentDisplayRootPath,
+        bool includeFileTreeInOutput,
+        IEnumerable<FileSystemItem> allDisplayRootItems)
     {
         var mergedFilesToDisplay = new List<MergedFileDisplayItem>();
         var sbPlainText = new StringBuilder();
@@ -46,6 +49,38 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
             });
             AppendSectionToPlainText(sbPlainText, "Pre-Prompt", appSettings.PrePrompt);
         }
+
+        if (includeFileTreeInOutput && !string.IsNullOrEmpty(currentDisplayRootPath) && allDisplayRootItems.Any())
+        {
+            try
+            {
+                var treeStructureString = GenerateTreeStructureString(allDisplayRootItems, currentDisplayRootPath);
+                mergedFilesToDisplay.Add(new MergedFileDisplayItem
+                {
+                    FilePath = "SYSTEM_FILE_TREE",
+                    RelativePath = "Project File Tree",
+                    Content = treeStructureString,
+                    Language = plainTextLanguage
+                });
+                AppendSectionToPlainText(sbPlainText, "Project File Tree", treeStructureString);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating file tree structure for display.");
+                var treeErrorMessage = $"ERROR generating file tree: {ex.Message.Shorten(100)}";
+                 mergedFilesToDisplay.Add(new MergedFileDisplayItem
+                {
+                    FilePath = "SYSTEM_FILE_TREE_ERROR",
+                    RelativePath = "Project File Tree (Error)",
+                    Content = treeErrorMessage,
+                    Language = plainTextLanguage,
+                    ErrorMessage = treeErrorMessage
+                });
+                AppendSectionToPlainText(sbPlainText, "Project File Tree (Error)", treeErrorMessage, isError: true);
+                if(string.IsNullOrEmpty(overallErrorMessage)) overallErrorMessage = "Error generating file tree.";
+            }
+        }
+
 
         var fileNodesToProcess = filesToMerge.ToList();
         if (fileNodesToProcess.Count != 0)
@@ -123,6 +158,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
 
 
         if (fileNodesToProcess.Count == 0 &&
+            !mergedFilesToDisplay.Any(mfd => mfd.FilePath == "SYSTEM_FILE_TREE") &&
             string.IsNullOrWhiteSpace(appSettings.PrePrompt) &&
             string.IsNullOrWhiteSpace(userPrompt) &&
             string.IsNullOrWhiteSpace(appSettings.PostPrompt))
@@ -140,10 +176,18 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         };
     }
 
-    private static void AppendSectionToPlainText(StringBuilder sb, string filePath, string content,
+    private static void AppendSectionToPlainText(StringBuilder sb, string filePathOrSectionName, string content,
         bool isError = false)
     {
-        sb.AppendLine($"// File: {filePath}");
+
+        string displayName = filePathOrSectionName;
+        if (!filePathOrSectionName.StartsWith("SYSTEM_") && !filePathOrSectionName.StartsWith("Pre-Prompt") && !filePathOrSectionName.StartsWith("Post-Prompt") && !filePathOrSectionName.StartsWith("User Prompt") && !filePathOrSectionName.StartsWith("Project File Tree"))
+        {
+             displayName = filePathOrSectionName.Replace('\\', Path.DirectorySeparatorChar);
+        }
+
+
+        sb.AppendLine($"// File: {displayName}");
         if (isError)
         {
             sb.AppendLine($"// {content}");
@@ -151,13 +195,62 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         else
         {
             sb.AppendLine("//--------------------------------------------------");
-            sb.AppendLine(content);
+            sb.AppendLine(content.TrimEnd('\r','\n'));
             sb.AppendLine("//--------------------------------------------------");
-            sb.AppendLine($"// End of file: {filePath}");
+            sb.AppendLine($"// End of file: {displayName}");
         }
 
         sb.AppendLine().AppendLine();
     }
+    
+    private string GenerateTreeStructureString(IEnumerable<FileSystemItem> displayRootItems, string currentDisplayRootPath)
+    {
+        var sb = new StringBuilder();
+        var rootDirName = Path.GetFileName(currentDisplayRootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (string.IsNullOrEmpty(rootDirName) && !string.IsNullOrEmpty(currentDisplayRootPath))
+        {
+            rootDirName = currentDisplayRootPath;
+        }
+        sb.AppendLine($"{rootDirName}{Path.DirectorySeparatorChar}");
+
+        var sortedRootItems = displayRootItems.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        for (int i = 0; i < sortedRootItems.Count; i++)
+        {
+            BuildTreeStringRecursive(sb, sortedRootItems[i], "", i == sortedRootItems.Count - 1);
+        }
+        return sb.ToString().TrimEnd('\r', '\n');
+    }
+
+    private void BuildTreeStringRecursive(StringBuilder sb, FileSystemItem item, string indent, bool isLast)
+    {
+        sb.Append(indent);
+        if (isLast)
+        {
+            sb.Append("└── ");
+            indent += "    ";
+        }
+        else
+        {
+            sb.Append("├── ");
+            indent += "│   ";
+        }
+        sb.Append(item.Name);
+        if (item.IsDirectory)
+        {
+            sb.Append(Path.DirectorySeparatorChar);
+        }
+        sb.AppendLine();
+
+        if (item.IsDirectory && item.Children.Any())
+        {
+            var sortedChildren = item.Children.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            for (int i = 0; i < sortedChildren.Count; i++)
+            {
+                BuildTreeStringRecursive(sb, sortedChildren[i], indent, i == sortedChildren.Count - 1);
+            }
+        }
+    }
+
 
     private static ILanguageDefinition GetLanguageDefinitionByFileName(string fileName)
     {

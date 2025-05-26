@@ -116,13 +116,16 @@
         <div class="content-actions-area">
             <MergedContentControls IsMergingContent="_isMergingContent"
                                    MergedContentTokenCount="_mergedContentTokenCount"
-                                   CanGenerateOrCopy="@(!string.IsNullOrEmpty(_mergedFileContentPlainText) && _selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false }) > 0)"
+                                   CanGenerateOrCopy="@(!string.IsNullOrEmpty(_mergedFileContentPlainText) || _includeFileTreeInOutput)"
                                    MergeErrorMessage="@_mergeErrorMessage"
                                    UserPromptValue="@_userPrompt"
+                                   IncludeFileTreeInOutput="_includeFileTreeInOutput"
+                                   CurrentDisplayRootPath="_currentDisplayRootPath"
                                    OnGenerateMergedContentClicked="GenerateMergedContentAsync"
                                    OnCopyMergedContentToClipboardClicked="CopyMergedContentToClipboardAsync"
                                    OnUserPromptInputChanged="HandleUserPromptInput"
-                                   OnClearUserPromptClicked="ClearUserPromptAndRefresh"/>
+                                   OnClearUserPromptClicked="ClearUserPromptAndRefresh"
+                                   OnIncludeFileTreeInOutputChanged="HandleIncludeFileTreeInOutputChangedAsync"/>
         </div>
 
         <div class="merged-content-viewer scrollable-area">
@@ -152,11 +155,11 @@
     private string _userPrompt = "";
     private Timer? _userPromptDebounceTimer;
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(500);
+    private bool _includeFileTreeInOutput;
 
     private AppSettings? _appSettings;
     private string _contextStatusMessage = "";
     private bool _contextStatusIsError;
-    // Reference to the child component to set its properties, e.g. NewContextName
     private ContextManagementPanel _contextManagementPanelRef = null!;
 
 
@@ -365,7 +368,7 @@
     {
         _contextStatusMessage = "";
         await GenerateMergedContentAsync();
-        StateHasChanged(); // Ensure UI updates for selection changes from tree
+        StateHasChanged(); 
     }
 
     private async Task ClearUserPromptAndRefresh()
@@ -384,6 +387,12 @@
         _userPrompt = e.Value?.ToString() ?? "";
         _userPromptDebounceTimer?.Change(_debounceTime, Timeout.InfiniteTimeSpan);
         _userPromptDebounceTimer ??= new Timer(DebouncedUserPromptAction, null, _debounceTime, Timeout.InfiniteTimeSpan);
+    }
+    
+    private async Task HandleIncludeFileTreeInOutputChangedAsync(bool newValue)
+    {
+        _includeFileTreeInOutput = newValue;
+        await GenerateMergedContentAsync();
     }
 
     private async void DebouncedUserPromptAction(object? state)
@@ -440,7 +449,12 @@
         await InvokeAsync(StateHasChanged);
         _appSettings ??= await SettingsService.GetAppSettingsAsync();
         var filesToMerge = _selectedFilePaths.Select(GetNodeByPath).Where(node => node is { IsDirectory: false }).OfType<FileSystemItem>().OrderBy(node => node.FullPath).ToList();
-        if (!filesToMerge.Any() && string.IsNullOrWhiteSpace(_appSettings.PrePrompt) && string.IsNullOrWhiteSpace(_userPrompt) && string.IsNullOrWhiteSpace(_appSettings.PostPrompt))
+        
+        if (!filesToMerge.Any() && 
+            string.IsNullOrWhiteSpace(_appSettings.PrePrompt) && 
+            string.IsNullOrWhiteSpace(_userPrompt) && 
+            string.IsNullOrWhiteSpace(_appSettings.PostPrompt) &&
+            !_includeFileTreeInOutput)
         {
             _mergedFileContentPlainText = "";
             _mergedContentTokenCount = 0;
@@ -448,7 +462,14 @@
             await InvokeAsync(StateHasChanged);
             return;
         }
-        var result = await ContentMergerSvc.GenerateMergedContentAsync(filesToMerge, _appSettings, _userPrompt, _currentDisplayRootPath);
+        var result = await ContentMergerSvc.GenerateMergedContentAsync(
+            filesToMerge, 
+            _appSettings, 
+            _userPrompt, 
+            _currentDisplayRootPath,
+            _includeFileTreeInOutput,
+            DisplayRootItems); // Pass DisplayRootItems for tree generation
+            
         _mergedFilesToDisplay = result.MergedFilesToDisplay;
         _mergedFileContentPlainText = result.MergedFileContentPlainText;
         _mergedContentTokenCount = result.EstimatedTokenCount;
@@ -501,7 +522,7 @@
         }
         _contextStatusIsError = false;
         await SettingsService.SaveAppSettingsAsync(_appSettings);
-        if (_contextManagementPanelRef != null) _contextManagementPanelRef.NewContextName = ""; // Reset child's input
+        if (_contextManagementPanelRef != null) _contextManagementPanelRef.NewContextName = ""; 
         await InvokeAsync(StateHasChanged);
     }
 
@@ -625,9 +646,9 @@
         {
             originalNode.SetSelectionStatus(isSelected, _selectedFilePaths);
             originalNode.UpdateParentSelectionStatus(_selectedFilePaths);
-            await HandleSelectionChangedAsync(originalNode); // This calls GenerateMergedContentAsync and StateHasChanged
+            await HandleSelectionChangedAsync(originalNode); 
         }
-        else { await InvokeAsync(StateHasChanged); } // If node not found, still update UI for checkbox
+        else { await InvokeAsync(StateHasChanged); } 
     }
 
     private async Task ClearSearchAsync()
