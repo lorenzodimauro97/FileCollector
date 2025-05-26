@@ -1,0 +1,58 @@
+﻿<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="panel-title mb-0">
+        Merged Content
+        @if (IsMergingContent)
+        {
+            <span class="spinner-border spinner-border-sm ms-2" role="status"
+                  aria-hidden="true"></span>
+        }
+        <span class="ms-2 small text-muted">~@MergedContentTokenCount tokens</span>
+    </h4>
+    <div class="d-flex align-items-center">
+        <button class="btn btn-light me-2" @onclick="OnGenerateMergedContentClicked"
+                disabled="@(IsMergingContent || !CanGenerateOrCopy)">
+            <TablerIcon OutlineIcon="@TablerIconOutlineName.Refresh" Class="me-1" Size="16px"/>
+            Refresh
+        </button>
+        <button class="btn btn-primary" @onclick="OnCopyMergedContentToClipboardClicked"
+                disabled="@(IsMergingContent || !CanGenerateOrCopy)">
+            <TablerIcon OutlineIcon="@TablerIconOutlineName.Clipboard" Class="me-1" Size="16px"/>
+            Copy
+        </button>
+        <span id="copyFeedback" class="ms-2 small text-success"></span>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(MergeErrorMessage))
+{
+    <div class="alert alert-danger small py-1 px-2">@MergeErrorMessage</div>
+}
+
+<div class="mb-3">
+    <label for="userPrompt" class="form-label">User Prompt:</label>
+    <div class="input-group">
+        <textarea id="userPrompt" class="form-control" rows="3"
+                  value="@UserPromptValue" @oninput="OnUserPromptInputChanged"
+                  placeholder="Enter any specific instructions or questions here..."></textarea>
+        <button class="btn btn-light" type="button" @onclick="OnClearUserPromptClicked"
+                title="Clear User Prompt">
+            <TablerIcon OutlineIcon="@TablerIconOutlineName.ClearAll" Size="16px"/>
+        </button>
+    </div>
+    <div class="form-text">This prompt is not saved. It appears after files and before the Post-Prompt.
+        Refreshes automatically after you stop typing.
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsMergingContent { get; set; }
+    [Parameter] public int MergedContentTokenCount { get; set; }
+    [Parameter] public bool CanGenerateOrCopy { get; set; } // True if plain text is not empty and files are selected
+    [Parameter] public string MergeErrorMessage { get; set; } = "";
+    [Parameter] public string UserPromptValue { get; set; } = "";
+
+    [Parameter] public EventCallback OnGenerateMergedContentClicked { get; set; }
+    [Parameter] public EventCallback OnCopyMergedContentToClipboardClicked { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnUserPromptInputChanged { get; set; }
+    [Parameter] public EventCallback OnClearUserPromptClicked { get; set; }
+}

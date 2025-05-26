@@ -1,0 +1,37 @@
+﻿@if (IsLoadingTree && !DisplayRootItems.Any())
+{
+    <p class="text-muted">Loading tree...</p>
+}
+else if (string.IsNullOrEmpty(CurrentDisplayRootPath) && string.IsNullOrEmpty(LoadingMessage) && !IsLoadingTree)
+{
+    <p class="text-muted">Select a root folder.</p>
+}
+else if (DisplayRootItems.Any())
+{
+    @foreach (var item in DisplayRootItems.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name))
+    {
+        <FileTreeNode Node="item"
+                      SelectedFilePaths="SelectedFilePaths"
+                      OnSelectionChanged="HandleSelectionChanged"
+                      Level="0"/>
+    }
+}
+else if (!string.IsNullOrEmpty(CurrentDisplayRootPath) && string.IsNullOrEmpty(LoadingMessage) && !IsLoadingTree)
+{
+    <p class="text-muted">No files or directories to display.</p>
+}
+
+@code {
+    [Parameter] public List<FileSystemItem> DisplayRootItems { get; set; } = [];
+    [Parameter] public List<string> SelectedFilePaths { get; set; } = [];
+    [Parameter] public bool IsLoadingTree { get; set; }
+    [Parameter] public string? CurrentDisplayRootPath { get; set; }
+    [Parameter] public string? LoadingMessage { get; set; }
+
+    [Parameter] public EventCallback<FileSystemItem> OnSelectionChanged { get; set; }
+
+    private async Task HandleSelectionChanged(FileSystemItem item)
+    {
+        await OnSelectionChanged.InvokeAsync(item);
+    }
+}

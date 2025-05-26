@@ -1,0 +1,31 @@
+﻿@if (SelectedFileNodes.Any())
+{
+    <div class="selected-files-list scrollable-area-sm list-group">
+        @foreach (var node in SelectedFileNodes)
+        {
+            <div class="list-group-item list-group-item-action d-flex align-items-center py-1 px-2">
+                <TablerIcon
+                    OutlineIcon="@IconHelper.GetIconForItem(node.Name, node.IsDirectory, node.IsExpanded)"
+                    Size="18px"
+                    Class="me-2 flex-shrink-0"
+                    Color="@(node.IsDirectory ? "var(--app-primary-color)" : "var(--text-color)")"/>
+                <span class="text-truncate" title="@node.FullPath">@node.Name</span>
+            </div>
+        }
+    </div>
+    <button class="btn btn-outline btn-sm mt-2" @onclick="OnClearAllSelectionsClicked"
+            disabled="@IsLoading">
+        <TablerIcon OutlineIcon="@TablerIconOutlineName.Trash" Class="me-1" Size="16px"/>
+        Clear Selection
+    </button>
+}
+else
+{
+    <p class="text-muted small">No items selected.</p>
+}
+
+@code {
+    [Parameter] public List<FileSystemItem> SelectedFileNodes { get; set; } = [];
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnClearAllSelectionsClicked { get; set; }
+}
