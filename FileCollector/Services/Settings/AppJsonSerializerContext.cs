@@ -9,7 +9,7 @@ namespace FileCollector.Services.Settings;
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase
 )]
 [JsonSerializable(typeof(AppConfiguration))]
-
+[JsonSerializable(typeof(AppSettings))]
 public partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }

@@ -1,154 +1,190 @@
 ﻿@page "/settings"
 @inject SettingsService SettingsSvc
 @inject ILogger<Settings> Logger
+@using System.Text.Json
+@using System.Threading
+@implements IAsyncDisposable
 
 <div class="page-settings-container">
-    <h3 class="mb-4">Application Settings</h3>
-    <div class="settings-grid">
-        <div class="settings-panel">
-            <h4 class="panel-title">Ignore Patterns</h4>
-            <p class="text-muted">Manage files and folders to ignore. Patterns follow .gitignore syntax (e.g., <code>node_modules/</code>,
-                <code>*.log</code>, <code>temp/</code>).</p>
-
-            @if (_appSettings == null)
+    <div class="settings-actions-bar">
+        <div class="settings-header">
+            <h3>Application Settings</h3>
+            @if (_hasUnsavedChanges)
             {
-                <p><em>Loading settings...</em></p>
-            }
-            else
-            {
-                @if (!_appSettings.IgnorePatterns.Any())
-                {
-                    <p class="text-muted"><em>No ignore patterns defined.</em></p>
-                }
-                else
-                {
-                    <ul class="list-group mb-3">
-                        @foreach (var pattern in _appSettings.IgnorePatterns)
-                        {
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <code>@pattern</code>
-                                <button class="btn btn-sm btn-subtle-danger" @onclick="() => RemovePattern(pattern)">
-                                    <TablerIcon OutlineIcon="TablerIconOutlineName.Trash" Size="16px"/>
-                                    Remove
-                                </button>
-                            </li>
-                        }
-                    </ul>
-                }
-
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" @bind="_newPattern"
-                           placeholder="Add new pattern (e.g., bin/ or *.tmp)" @onkeyup="HandleInputKeyUp"/>
-                    <button class="btn btn-light" @onclick="AddPattern"
-                            disabled="@string.IsNullOrWhiteSpace(_newPattern)">
-                        <TablerIcon OutlineIcon="TablerIconOutlineName.Plus"/>
-                        Add
-                    </button>
-                </div>
-
-                <h5 class="mt-4">Import from .gitignore</h5>
-                <p class="text-muted">Paste the content of a .gitignore file below or upload one.</p>
-
-                <div class="mb-3">
-                    <label for="gitignoreContent" class="form-label">Paste .gitignore content:</label>
-                    <textarea id="gitignoreContent" class="form-control" rows="5"
-                              @bind="_gitIgnoreContentInput"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label for="fileUpload" class="form-label">Or upload .gitignore file:</label>
-                    <InputFile id="fileUpload" OnChange="HandleFileSelected" class="form-control"
-                               accept=".gitignore, .txt"/>
-                </div>
-                <button class="btn btn-light" @onclick="ImportGitIgnore"
-                        disabled="@(string.IsNullOrWhiteSpace(_gitIgnoreContentInput) && _loadedFileContent == null)">
-                    <TablerIcon OutlineIcon="TablerIconOutlineName.Download"/>
-                    Import Patterns
-                </button>
+                <span class="badge bg-warning text-dark ms-3">Unsaved Changes</span>
             }
         </div>
-
-        <div class="settings-panel">
-            <h4 class="panel-title">Prompts</h4>
-            <p class="text-muted">Define pre-prompt and post-prompt content that will be included with the merged
-                files.</p>
-            @if (_appSettings == null)
-            {
-                <p><em>Loading settings...</em></p>
-            }
-            else
-            {
-                <div class="mb-3">
-                    <label for="prePrompt" class="form-label">Pre-Prompt:</label>
-                    <textarea id="prePrompt" class="form-control" rows="5" @bind="_appSettings.PrePrompt"
-                              placeholder="Content to appear before any files..."></textarea>
-                </div>
-                <div class="mb-3">
-                    <label for="postPrompt" class="form-label">Post-Prompt:</label>
-                    <textarea id="postPrompt" class="form-control" rows="5" @bind="_appSettings.PostPrompt"
-                              placeholder="Content to appear after all files (but before the non-persistent user prompt)..."></textarea>
-                </div>
-            }
+        <div class="settings-action-buttons">
+            <button class="btn btn-light" @onclick="DiscardChangesAsync" disabled="@(!_hasUnsavedChanges || _isBusy)">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.RotateClockwise" Class="me-1" Size="16px"/> Discard
+            </button>
+            <button class="btn btn-primary" @onclick="SaveAllSettingsAsync" disabled="@(!_hasUnsavedChanges || _isBusy)">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.DeviceFloppy" Class="me-1" Size="16px"/> Save Changes
+            </button>
         </div>
     </div>
 
     @if (!string.IsNullOrEmpty(_statusMessage))
     {
-        <div class="alert @(_statusSuccess ? "alert-success" : "alert-warning") mt-4 py-2 px-3" role="alert">
+        <div class="alert @(_statusSuccess ? "alert-success" : "alert-danger") mt-0 py-2 px-3" role="alert">
             @_statusMessage
         </div>
     }
 
-    <div class="mt-4">
-        <button class="btn btn-primary btn-lg" @onclick="SaveAllSettingsAsync" disabled="@(_appSettings == null)">
-            <TablerIcon OutlineIcon="TablerIconOutlineName.DeviceFloppy" Class="me-1"/>
-            Save All Settings
-        </button>
-    </div>
+    @if (_appSettings == null || _isBusy && _initialLoadComplete == false)
+    {
+        <div class="settings-section">
+            <p><em>Loading settings...</em></p>
+        </div>
+    }
+    else
+    {
+        <div class="settings-section">
+            <h4 class="panel-title">Ignore Patterns</h4>
+            <p class="text-muted small">Manage files and folders to ignore. Patterns follow .gitignore syntax (e.g., <code>node_modules/</code>, <code>*.log</code>, <code>temp/</code>).</p>
+
+            @if (!_appSettings.IgnorePatterns.Any())
+            {
+                <p class="text-muted"><em>No ignore patterns defined.</em></p>
+            }
+            else
+            {
+                <ul class="list-group mb-3">
+                    @foreach (var pattern in _appSettings.IgnorePatterns)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <code>@pattern</code>
+                            <button class="btn btn-sm btn-subtle-danger" @onclick="() => RemovePattern(pattern)" disabled="@_isBusy">
+                                <TablerIcon OutlineIcon="TablerIconOutlineName.Trash" Size="16px"/>
+                                Remove
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" @bind="_newPattern"
+                       placeholder="Add new pattern (e.g., bin/ or *.tmp)" @onkeyup="HandleNewPatternInputKeyUp" disabled="@_isBusy"/>
+                <button class="btn btn-light" @onclick="AddPattern"
+                        disabled="@(string.IsNullOrWhiteSpace(_newPattern) || _isBusy)">
+                    <TablerIcon OutlineIcon="TablerIconOutlineName.Plus" Size="16px"/>
+                    Add
+                </button>
+            </div>
+
+            <h5 class="mt-4">Import from .gitignore</h5>
+            <p class="text-muted small">Paste the content of a .gitignore file below or upload one.</p>
+
+            <div class="mb-3">
+                <label for="gitignoreContent" class="form-label small">Paste .gitignore content:</label>
+                <textarea id="gitignoreContent" class="form-control" rows="5"
+                          @bind="_gitIgnoreContentInput" @bind:after="AfterGitIgnoreInputChanged" disabled="@_isBusy"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="fileUpload" class="form-label small">Or upload .gitignore file:</label>
+                <InputFile id="fileUpload" OnChange="HandleFileSelected" class="form-control"
+                           accept=".gitignore,.txt" disabled="@_isBusy"/>
+            </div>
+            <button class="btn btn-light" @onclick="ImportGitIgnore"
+                    disabled="@((string.IsNullOrWhiteSpace(_gitIgnoreContentInput) && _loadedFileContent == null) || _isBusy)">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Size="16px"/>
+                Import Patterns
+            </button>
+        </div>
+
+        <div class="settings-section">
+            <h4 class="panel-title">Prompts</h4>
+            <p class="text-muted small">Define pre-prompt and post-prompt content that will be included with the merged files.</p>
+            <div class="mb-3">
+                <label for="prePrompt" class="form-label">Pre-Prompt:</label>
+                <textarea id="prePrompt" class="form-control" rows="5" @bind="_appSettings.PrePrompt" @bind:after="MarkAsDirty"
+                          placeholder="Content to appear before any files..." disabled="@_isBusy"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="postPrompt" class="form-label">Post-Prompt:</label>
+                <textarea id="postPrompt" class="form-control" rows="5" @bind="_appSettings.PostPrompt" @bind:after="MarkAsDirty"
+                          placeholder="Content to appear after all files (but before the non-persistent user prompt)..." disabled="@_isBusy"></textarea>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     private AppSettings? _appSettings;
+    private string? _initialAppSettingsJson;
+    private bool _hasUnsavedChanges;
+    private bool _isBusy;
+    private bool _initialLoadComplete;
+
     private string _newPattern = string.Empty;
     private string _gitIgnoreContentInput = string.Empty;
     private string _statusMessage = string.Empty;
     private bool _statusSuccess;
     private IBrowserFile? _selectedFile;
     private string? _loadedFileContent;
+    
+    private Timer? _statusClearTimer;
+    private bool IsDisposed { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        _isBusy = true;
+        StateHasChanged(); 
+
         _appSettings = await SettingsSvc.GetAppSettingsAsync();
+        _initialAppSettingsJson = JsonSerializer.Serialize(_appSettings, AppJsonSerializerContext.Default.AppSettings);
+        _hasUnsavedChanges = false;
+        _initialLoadComplete = true;
+        _isBusy = false;
     }
 
-    private void AddPattern()
+    private async Task MarkAsDirty()
     {
-        if (string.IsNullOrWhiteSpace(_newPattern) || _appSettings?.IgnorePatterns.Contains(_newPattern.Trim()) == true)
+        if (!_hasUnsavedChanges)
         {
-            if (_appSettings?.IgnorePatterns.Contains(_newPattern.Trim()) == true)
-            {
-                SetStatusMessage($"Pattern '{_newPattern.Trim()}' already exists.", false);
-            }
+            _hasUnsavedChanges = true;
+        }
+        await ClearStatusMessageAfterDelay();
+    }
+    
+    private async Task AfterGitIgnoreInputChanged()
+    {
+        _loadedFileContent = null; 
+        await MarkAsDirty();
+    }
 
+    private async Task AddPattern()
+    {
+        if (string.IsNullOrWhiteSpace(_newPattern) || _appSettings == null) return;
+
+        var trimmedPattern = _newPattern.Trim();
+        if (_appSettings.IgnorePatterns.Contains(trimmedPattern))
+        {
+            await SetStatusMessage($"Pattern '{trimmedPattern}' already exists.", false);
             return;
         }
 
-        _appSettings?.IgnorePatterns.Add(_newPattern.Trim());
+        _appSettings.IgnorePatterns.Add(trimmedPattern);
         _newPattern = string.Empty;
-        SetStatusMessage("Pattern added to list. Save settings to persist.", true);
+        await MarkAsDirty();
+        await SetStatusMessage("Pattern added. Save changes to persist.", true);
     }
 
-    private async Task HandleInputKeyUp(KeyboardEventArgs e)
+    private async Task HandleNewPatternInputKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
-            AddPattern();
+            await AddPattern();
         }
     }
 
-    private void RemovePattern(string pattern)
+    private async Task RemovePattern(string pattern)
     {
-        _appSettings?.IgnorePatterns.Remove(pattern);
-        SetStatusMessage($"Pattern '{pattern}' removed from list. Save settings to persist.", true);
+        if (_appSettings == null) return;
+        _appSettings.IgnorePatterns.Remove(pattern);
+        await MarkAsDirty();
+        await SetStatusMessage($"Pattern '{pattern}' removed. Save changes to persist.", true);
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
@@ -161,38 +197,41 @@
             {
                 using var streamReader = new StreamReader(_selectedFile.OpenReadStream(maxFileSize));
                 _loadedFileContent = await streamReader.ReadToEndAsync();
-                _gitIgnoreContentInput = _loadedFileContent; // Also populate textarea for visibility
-                SetStatusMessage($"File '{_selectedFile.Name}' loaded. Ready to import. Save settings to persist changes.", true);
+                _gitIgnoreContentInput = _loadedFileContent; 
+                await SetStatusMessage($"File '{_selectedFile.Name}' loaded. Review and import. Then save changes to persist.", true);
+                await MarkAsDirty();
             }
             catch (IOException ex)
             {
                 Logger.LogError(ex, "Error reading file or file too large.");
-                SetStatusMessage($"Error reading file '{_selectedFile.Name}': {ex.Message}. Max size: {maxFileSize / (1024 * 1024)}MB", false);
+                await SetStatusMessage($"Error reading file '{_selectedFile.Name}': {ex.Message}. Max size: {maxFileSize / (1024 * 1024)}MB", false);
                 _loadedFileContent = null;
-                _gitIgnoreContentInput = string.Empty;
+                _gitIgnoreContentInput = string.Empty; 
+                await MarkAsDirty();
             }
         }
         else
         {
             _loadedFileContent = null;
         }
-
         StateHasChanged();
     }
 
-    private void ImportGitIgnore()
+    private async Task ImportGitIgnore()
     {
+        if (_appSettings == null) return;
+
         var contentToParse = !string.IsNullOrWhiteSpace(_gitIgnoreContentInput) ? _gitIgnoreContentInput : _loadedFileContent;
 
         if (string.IsNullOrWhiteSpace(contentToParse))
         {
-            SetStatusMessage("No content to import.", false);
+            await SetStatusMessage("No content to import.", false);
             return;
         }
 
         var lines = contentToParse.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
+            .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#") && !line.StartsWith("\\#"))
             .ToList();
 
         var newPatternsAdded = 0;
@@ -200,9 +239,9 @@
 
         foreach (var line in lines)
         {
-            if (_appSettings?.IgnorePatterns.Contains(line) == false)
+            if (!_appSettings.IgnorePatterns.Contains(line))
             {
-                _appSettings?.IgnorePatterns.Add(line);
+                _appSettings.IgnorePatterns.Add(line);
                 newPatternsAdded++;
             }
             else
@@ -213,38 +252,117 @@
 
         if (newPatternsAdded > 0)
         {
-            SetStatusMessage($"Import successful. Added {newPatternsAdded} new patterns. Skipped {patternsSkipped} duplicates. Save settings to persist.", true);
+            await MarkAsDirty();
+            await SetStatusMessage($"Imported {newPatternsAdded} new patterns. Skipped {patternsSkipped} duplicates. Save changes to persist.", true);
         }
-        else if (patternsSkipped > 0 && newPatternsAdded == 0)
+        else if (patternsSkipped > 0)
         {
-            SetStatusMessage($"No new patterns to add from import. Skipped {patternsSkipped} duplicates.", false);
+            await SetStatusMessage($"No new patterns to add from import. Skipped {patternsSkipped} duplicates.", false);
         }
         else
         {
-            SetStatusMessage("No valid patterns found to import.", false);
+            await SetStatusMessage("No valid patterns found to import.", false);
         }
-
-        _gitIgnoreContentInput = string.Empty;
-        _loadedFileContent = null;
-        _selectedFile = null; // Clear the file input
     }
 
     private async Task SaveAllSettingsAsync()
     {
-        if (_appSettings == null)
-        {
-            SetStatusMessage("Settings not loaded, cannot save.", false);
-            return;
-        }
+        if (_appSettings == null || !_hasUnsavedChanges) return;
 
+        _isBusy = true;
         await SettingsSvc.SaveAppSettingsAsync(_appSettings);
-        SetStatusMessage("All settings saved successfully.", true);
-        await OnInitializedAsync(); // Refresh settings from service
+        _initialAppSettingsJson = JsonSerializer.Serialize(_appSettings, AppJsonSerializerContext.Default.AppSettings);
+        _hasUnsavedChanges = false;
+        await SetStatusMessage("All settings saved successfully.", true);
+        _isBusy = false;
     }
 
-    private void SetStatusMessage(string message, bool success)
+    private async Task DiscardChangesAsync()
+    {
+        if (_appSettings == null || _initialAppSettingsJson == null || !_hasUnsavedChanges) return;
+
+        _isBusy = true;
+        var revertedSettings = JsonSerializer.Deserialize<AppSettings>(_initialAppSettingsJson, AppJsonSerializerContext.Default.AppSettings);
+        if (revertedSettings != null)
+        {
+            _appSettings = revertedSettings;
+            _gitIgnoreContentInput = _loadedFileContent ?? string.Empty;
+            _hasUnsavedChanges = false;
+            await SetStatusMessage("Changes discarded.", true);
+        }
+        else
+        {
+            Logger.LogError("Failed to deserialize initial settings for discard operation.");
+            await SetStatusMessage("Error discarding changes. Settings might be in an inconsistent state.", false);
+        }
+        _isBusy = false;
+        StateHasChanged();
+    }
+
+    private async Task SetStatusMessage(string message, bool success)
     {
         _statusMessage = message;
         _statusSuccess = success;
+        await ClearStatusMessageAfterDelay();
+    }
+
+    private async Task ClearStatusMessageAfterDelay(int delayMilliseconds = 3000)
+    {
+        if (_statusClearTimer != null)
+        {
+            await _statusClearTimer.DisposeAsync();
+        }
+        _statusClearTimer = new Timer(TimerElapsedCallback, null, delayMilliseconds, Timeout.Infinite);
+    }
+    
+    private void TimerElapsedCallback(object? state)
+    {
+        // Fire-and-forget the async task. This runs on a ThreadPool thread.
+        _ = PerformTimerActionAsync();
+    }
+
+    private async Task PerformTimerActionAsync()
+    {
+        try
+        {
+            if (IsDisposed)
+            {
+                Logger.LogDebug("PerformTimerActionAsync: Component is disposed, skipping UI update.");
+                return;
+            }
+
+            // Marshal the UI update to Blazor's synchronization context.
+            await InvokeAsync(() =>
+            {
+                // Re-check IsDisposed after marshalling, as the component could have been disposed
+                // in the meantime.
+                if (IsDisposed)
+                {
+                    Logger.LogDebug("PerformTimerActionAsync (on sync context): Component is disposed, skipping status message clear.");
+                    return;
+                }
+                _statusMessage = string.Empty;
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // This can happen if InvokeAsync is called after the component (or its renderer) is disposed.
+            Logger.LogDebug("PerformTimerActionAsync: InvokeAsync failed, component (or renderer) likely disposed.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in PerformTimerActionAsync during UI update.");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        IsDisposed = true;
+        if (_statusClearTimer != null)
+        {
+            await _statusClearTimer.DisposeAsync();
+            _statusClearTimer = null;
+        }
     }
 }
