@@ -71,8 +71,8 @@
                     <FileTreeDisplay DisplayRootItems="DisplayRootItems"
                                      SelectedFilePaths="_selectedFilePaths"
                                      IsLoadingTree="_isLoadingTree"
-                                     CurrentDisplayRootPath="_currentDisplayRootPath"
-                                     LoadingMessage="_loadingMessage"
+                                     CurrentDisplayRootPath="@_currentDisplayRootPath"
+                                     LoadingMessage="@_loadingMessage"
                                      OnSelectionChanged="HandleSelectionChangedAsync"/>
                 </div>
             </div>
@@ -80,7 +80,7 @@
                 <h4 class="panel-title">Search Files</h4>
                 <SearchPanel SearchTerm="@_searchTerm"
                              IsLoadingOrLoadingTree="@(_isLoading || _isLoadingTree)"
-                             CurrentDisplayRootPath="_currentDisplayRootPath"
+                             CurrentDisplayRootPath="@_currentDisplayRootPath"
                              IsPerformingSearch="_isPerformingSearch"
                              SearchResults="_searchResults"
                              HasTrueRootItems="@_trueRootItems.Any()"
@@ -98,7 +98,7 @@
             </div>
             <div class="panel-section">
                 <h4 class="panel-title">Saved Contexts</h4>
-                <ContextManagementPanel CurrentDisplayRootPath="_currentDisplayRootPath"
+                <ContextManagementPanel CurrentDisplayRootPath="@_currentDisplayRootPath"
                                         IsLoading="_isLoading"
                                         AppSettings="_appSettings"
                                         CanSaveContext="@(_selectedFilePaths.Count(p => GetNodeByPath(p) is { IsDirectory: false }) > 0)"
@@ -120,7 +120,7 @@
                                    MergeErrorMessage="@_mergeErrorMessage"
                                    UserPromptValue="@_userPrompt"
                                    IncludeFileTreeInOutput="_includeFileTreeInOutput"
-                                   CurrentDisplayRootPath="_currentDisplayRootPath"
+                                   CurrentDisplayRootPath="@_currentDisplayRootPath"
                                    OnGenerateMergedContentClicked="GenerateMergedContentAsync"
                                    OnCopyMergedContentToClipboardClicked="CopyMergedContentToClipboardAsync"
                                    OnUserPromptInputChanged="HandleUserPromptInput"

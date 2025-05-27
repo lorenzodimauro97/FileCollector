@@ -10,6 +10,8 @@ namespace FileCollector.Services.Settings;
 )]
 [JsonSerializable(typeof(AppConfiguration))]
 [JsonSerializable(typeof(AppSettings))]
+[JsonSerializable(typeof(SavedContext))]
+[JsonSerializable(typeof(UpdateSettings))]
 public partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }
