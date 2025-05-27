@@ -26,8 +26,11 @@
         <span @onclick="HandleContentClick"
               class="node-label"
               title="@Node.FullPath">
-            <TablerIcon OutlineIcon="@IconHelper.GetIconForItem(Node.Name, Node.IsDirectory, Node.IsExpanded)"
-                        Color="@(Node.IsDirectory ? "var(--app-primary-color)" : "var(--text-color)")"
+            @{
+                var (icon, color) = IconHelper.GetIconForItem(Node.Name, Node.IsDirectory, Node.IsExpanded);
+            }
+            <TablerIcon OutlineIcon="@icon"
+                        Color="@color"
                         Class="me-1 node-icon"
                         Size="18px"
                         StrokeWidth="1.5f"/>

@@ -1,0 +1,113 @@
+﻿@if (!string.IsNullOrEmpty(ContextStatusMessage))
+{
+    <div class="alert @(ContextStatusIsError ? "alert-danger" : "alert-success") small py-1 px-2 mb-2"
+         role="alert">
+        @ContextStatusMessage
+    </div>
+}
+
+@if (string.IsNullOrEmpty(CurrentDisplayRootPath))
+{
+    <p class="text-muted small">Select a root folder to manage contexts.</p>
+}
+else
+{
+    var contextsForCurrentPath = AppSettings?.SavedContexts
+        .Where(c => c.RootPath == CurrentDisplayRootPath)
+        .OrderBy(c => c.Name)
+        .ToList() ?? [];
+
+    <div class="mb-2">
+        <label for="newContextNameInput" class="form-label small mb-1">Save current selection as:</label>
+        <div class="input-group input-group-sm">
+            <input type="text" id="newContextNameInput" class="form-control form-control-sm"
+                   @bind="NewContextName" @bind:event="oninput" placeholder="Enter context name..."/>
+            <button class="btn btn-light" @onclick="SaveContextClicked"
+                    disabled="@(string.IsNullOrWhiteSpace(NewContextName) || !CanSaveContext || IsLoading)">
+                <TablerIcon OutlineIcon="@TablerIconOutlineName.DeviceFloppy" Size="16px"/>
+                Save
+            </button>
+        </div>
+    </div>
+
+    @if (contextsForCurrentPath.Any())
+    {
+        <label for="loadContextSelect" class="form-label small mb-1">Load context:</label>
+        <div class="input-group input-group-sm">
+            <select id="loadContextSelect" class="form-select form-select-sm"
+                    @bind="SelectedContextToLoadId">
+                <option value="">Select to load/delete...</option>
+                @foreach (var ctx in contextsForCurrentPath)
+                {
+                    <option value="@ctx.Name">@ctx.Name</option>
+                }
+            </select>
+            <button class="btn btn-light"
+                    @onclick="LoadContextClicked"
+                    disabled="@(string.IsNullOrEmpty(SelectedContextToLoadId) || IsLoading)">
+                <TablerIcon OutlineIcon="@TablerIconOutlineName.PlayerPlay" Size="16px"/>
+                Load
+            </button>
+            <button class="btn btn-subtle-danger"
+                    @onclick="DeleteContextClicked"
+                    disabled="@(string.IsNullOrEmpty(SelectedContextToLoadId) || IsLoading)">
+                <TablerIcon OutlineIcon="@TablerIconOutlineName.Trash" Size="16px"/>
+            </button>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted small mt-2">No saved contexts for this root folder.</p>
+    }
+}
+
+@code {
+    [Parameter] public string? CurrentDisplayRootPath { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public AppSettings? AppSettings { get; set; }
+    [Parameter] public bool CanSaveContext { get; set; } // True if actual files are selected
+
+    [Parameter] public string ContextStatusMessage { get; set; } = "";
+    [Parameter] public bool ContextStatusIsError { get; set; }
+
+    [Parameter] public EventCallback<string> OnSaveContext { get; set; }
+    [Parameter] public EventCallback<string> OnLoadContext { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteContext { get; set; }
+
+    private string _newContextName = "";
+    public string NewContextName
+    {
+        get => _newContextName;
+        set => _newContextName = value;
+    }
+
+
+    private string? _selectedContextToLoadId;
+    public string? SelectedContextToLoadId
+    {
+        get => _selectedContextToLoadId;
+        set => _selectedContextToLoadId = value;
+    }
+
+
+    private async Task SaveContextClicked()
+    {
+        await OnSaveContext.InvokeAsync(NewContextName);
+    }
+
+    private async Task LoadContextClicked()
+    {
+        if (!string.IsNullOrEmpty(SelectedContextToLoadId))
+        {
+            await OnLoadContext.InvokeAsync(SelectedContextToLoadId);
+        }
+    }
+
+    private async Task DeleteContextClicked()
+    {
+        if (!string.IsNullOrEmpty(SelectedContextToLoadId))
+        {
+            await OnDeleteContext.InvokeAsync(SelectedContextToLoadId);
+        }
+    }
+}

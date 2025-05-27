@@ -1,0 +1,80 @@
+﻿<div class="input-group input-group-sm mb-2">
+    <input type="text" class="form-control form-control-sm" placeholder="Search files by name..."
+           value="@SearchTerm" @oninput="OnSearchInput"
+           disabled="@(IsLoadingOrLoadingTree || string.IsNullOrEmpty(CurrentDisplayRootPath))"/>
+    @if (!string.IsNullOrEmpty(SearchTerm))
+    {
+        <button class="btn btn-light" @onclick="OnClearSearch" title="Clear search"
+                disabled="@IsLoadingOrLoadingTree">
+            <TablerIcon OutlineIcon="@TablerIconOutlineName.X" Size="16px"/>
+        </button>
+    }
+</div>
+
+@if (IsPerformingSearch)
+{
+    <p class="text-muted small"><em>Searching...</em></p>
+}
+else if (!string.IsNullOrEmpty(SearchTerm) && !SearchResults.Any())
+{
+    <p class="text-muted small"><em>No files found matching "@SearchTerm.Shorten(30)".</em></p>
+}
+else if (SearchResults.Any())
+{
+    <div class="search-results-list scrollable-area-sm list-group" style="max-height: 25vh;">
+        @foreach (var node in SearchResults)
+        {
+            <div class="list-group-item list-group-item-action d-flex align-items-center py-1 px-2">
+                <input type="checkbox" class="form-check-input me-2" style="flex-shrink: 0;"
+                       checked="@node.IsSelected"
+                       @onchange="async (ChangeEventArgs e) => await HandleSearchResultSelectionChanged(node, (bool)e.Value!)"/>
+                @{
+                    var (icon, color) = IconHelper.GetIconForItem(node.Name, false, false);
+                }
+                <TablerIcon
+                    OutlineIcon="@icon"
+                    Color="@color"
+                    Size="18px"
+                    Class="me-2 flex-shrink-0"/>
+                <span class="text-truncate" title="@node.FullPath">@node.Name</span>
+                @{
+                    var relativePath = node.FullPath;
+                    if (!string.IsNullOrEmpty(CurrentDisplayRootPath) && node.FullPath.StartsWith(CurrentDisplayRootPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        relativePath = Path.GetRelativePath(CurrentDisplayRootPath, node.FullPath);
+                    }
+                }
+                <span class="ms-auto text-muted small text-truncate" style="flex-shrink: 0; max-width: 40%;" title="@node.FullPath">
+                    @relativePath.Shorten(30)
+                </span>
+            </div>
+        }
+    </div>
+}
+else if (!string.IsNullOrEmpty(SearchTerm) && string.IsNullOrEmpty(CurrentDisplayRootPath))
+{
+    <p class="text-muted small"><em>Please select a root folder to search.</em></p>
+}
+else if (!string.IsNullOrEmpty(SearchTerm) && !HasTrueRootItems && !string.IsNullOrEmpty(CurrentDisplayRootPath))
+{
+    <p class="text-muted small"><em>No files loaded to search in the current folder.</em></p>
+}
+
+@code {
+    [Parameter] public string SearchTerm { get; set; } = "";
+    [Parameter] public bool IsLoadingOrLoadingTree { get; set; }
+    [Parameter] public string? CurrentDisplayRootPath { get; set; }
+    [Parameter] public bool IsPerformingSearch { get; set; }
+    [Parameter] public List<FileSystemItem> SearchResults { get; set; } = [];
+    [Parameter] public bool HasTrueRootItems { get; set; }
+
+
+    [Parameter] public EventCallback<ChangeEventArgs> OnSearchInput { get; set; }
+    [Parameter] public EventCallback OnClearSearch { get; set; }
+    [Parameter] public EventCallback<Tuple<FileSystemItem, bool>> OnSearchResultSelectionChanged { get; set; }
+
+    private async Task HandleSearchResultSelectionChanged(FileSystemItem item, bool isSelected)
+    {
+        await OnSearchResultSelectionChanged.InvokeAsync(Tuple.Create(item, isSelected));
+    }
+}

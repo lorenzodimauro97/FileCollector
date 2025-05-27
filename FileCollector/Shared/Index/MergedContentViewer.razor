@@ -1,0 +1,57 @@
+﻿@if (SelectedActualFilesCount > 0 || MergedFilesToDisplay.Any())
+{
+    @if (MergedFilesToDisplay.Any())
+    {
+        <Virtualize Items="@MergedFilesToDisplay" Context="fileItem">
+            <div @key="fileItem.FilePath"
+                 class="file-block @(fileItem.ErrorMessage != null ? "error-block" : "")">
+                <p class="file-header">
+                    // File: @fileItem.RelativePath @(fileItem.ErrorMessage != null ? "(Error)" : "")
+                </p>
+
+                @if (fileItem.ErrorMessage != null)
+                {
+                    <pre class="file-content-error"><code>@fileItem.Content</code></pre>
+                }
+                else if (fileItem.FilePath == "SYSTEM_PRE_PROMPT" || fileItem.FilePath == "SYSTEM_POST_PROMPT" || fileItem.FilePath == "SYSTEM_USER_PROMPT")
+                {
+                    <MarkdownRenderer MarkdownContent="@fileItem.Content" UseHardLineBreaks="true" />
+                }
+                else
+                {
+                    <CodeHighlighter Content="@fileItem.Content"
+                                     LanguageDefinition="@fileItem.Language"/>
+                }
+
+                <p class="file-footer">
+                    // End of file: @fileItem.RelativePath
+                </p>
+            </div>
+        </Virtualize>
+    }
+    else if (!IsMergingContent && SelectedActualFilesCount > 0)
+    {
+        <div class="merged-content-placeholder">
+            <p class="text-muted m-0">Click "Refresh" to view merged content.</p>
+        </div>
+    }
+    else if (!IsMergingContent)
+    {
+        <div class="merged-content-placeholder">
+            <p class="text-muted m-0">Select files to view merged content.</p>
+        </div>
+    }
+}
+else if (!IsMergingContent)
+{
+    <div class="merged-content-placeholder">
+        <p class="text-muted m-0">Select files from the tree to see their merged content.</p>
+    </div>
+}
+
+
+@code {
+    [Parameter] public List<MergedFileDisplayItem> MergedFilesToDisplay { get; set; } = [];
+    [Parameter] public bool IsMergingContent { get; set; }
+    [Parameter] public int SelectedActualFilesCount { get; set; }
+}
