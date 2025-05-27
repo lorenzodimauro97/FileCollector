@@ -752,6 +752,7 @@
         _contextStatusIsError = false;
 
         await SettingsService.SaveAppSettingsAsync(_appSettings);
+        _appSettings = await SettingsService.GetAppSettingsAsync(); 
         _newContextName = "";
         await InvokeAsync(StateHasChanged);
     }
@@ -827,6 +828,7 @@
         {
             _appSettings.SavedContexts.Remove(contextToRemove);
             await SettingsService.SaveAppSettingsAsync(_appSettings);
+            _appSettings = await SettingsService.GetAppSettingsAsync(); 
             _contextStatusMessage = $"Context '{contextNameToDelete}' deleted.";
             _contextStatusIsError = false;
             if (_selectedContextToLoadId == contextNameToDelete) _selectedContextToLoadId = null;
