@@ -1,12 +1,6 @@
-name: Build and Release FileCollector
-
-on:
-  push:
-    branches:
-      - master
-
 jobs:
   build:
+    
     name: Build for ${{ matrix.os-name }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -65,7 +59,7 @@ jobs:
         if: runner.os == 'Windows'
         run: Get-ChildItem -Path ./publish_output -Recurse | Select-Object FullName, Length, Mode, LastWriteTime
         shell: pwsh
-      
+
       - name: List publish_output contents (Diagnostics)
         if: runner.os != 'Windows'
         run: ls -lR ./publish_output
@@ -95,14 +89,17 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout code # Needed to read Directory.Build.props
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Generate Release Info
         id: release_info
         run: |
-          # Using Python for robust XML parsing in bash environment
-          # Ensure Python is available on the runner (ubuntu-latest usually has it)
+          # Using Python for robust XML parsing in bash environment.
+          # This script determines the version for the new tag and release name.
+          # Ensure Python is available on the runner (ubuntu-latest usually has it).
           VERSION_INFO=$(python -c "
           import xml.etree.ElementTree as ET
           tree = ET.parse('./Directory.Build.props')
@@ -117,6 +114,77 @@ jobs:
           print(f'release_name=Release v{app_version}')
           ")
           echo "$VERSION_INFO" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Configure git user for safety, though not strictly needed for log/describe
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+          # Attempt to find the most recent tag starting with 'v' (matching your release tag pattern e.g., v1.0.29.1)
+          # This tag should be an ancestor of the current HEAD.
+          LATEST_TAG=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || echo "")
+          CURRENT_TAG_BEING_CREATED="${{ steps.release_info.outputs.tag_name }}" # For logging and comparison
+
+          COMMIT_LOG_ENTRIES=""
+          CHANGELOG_TITLE=""
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous tag matching 'v*' found. This is likely the first release using this tagging scheme."
+            CHANGELOG_TITLE="### ✨ What's New (First Tagged Release)"
+            # Log all commits leading to HEAD. For very long histories, you might consider limiting (e.g., with -n <number>).
+            COMMIT_LOG_ENTRIES=$(git log --pretty=format:'- %s (%h)' --abbrev-commit HEAD)
+            if [ -z "$COMMIT_LOG_ENTRIES" ]; then # Should only happen for an empty repo or very first commit
+                # Try to get at least the current commit if `git log HEAD` was empty for some reason
+                COMMIT_LOG_ENTRIES=$(git log -1 --pretty=format:'- %s (%h)' --abbrev-commit HEAD)
+            fi
+            if [ -z "$COMMIT_LOG_ENTRIES" ]; then # Fallback if still empty
+                COMMIT_LOG_ENTRIES="Initial commit or no commit history found to display."
+            fi
+          else
+            echo "Previous tag found: $LATEST_TAG"
+            echo "Current tag to be created: $CURRENT_TAG_BEING_CREATED"
+            echo "Current commit (HEAD): ${{ github.sha }}"
+
+            # Check if LATEST_TAG points to the same commit as HEAD
+            if [ "$(git rev-parse $LATEST_TAG)" == "$(git rev-parse HEAD)" ]; then
+              # HEAD is the same commit as the LATEST_TAG.
+              # This implies no new application code changes since LATEST_TAG was applied.
+              if [ "$LATEST_TAG" == "$CURRENT_TAG_BEING_CREATED" ]; then
+                # This case means we are re-running the release for the exact same tag.
+                CHANGELOG_TITLE="### 🔄 Re-release of $LATEST_TAG"
+                COMMIT_LOG_ENTRIES="This is a re-execution for tag $LATEST_TAG. No new code commits since this tag was last published."
+              else
+                # LATEST_TAG is on HEAD, but CURRENT_TAG_BEING_CREATED is different.
+                # Example: previous tag v1.0.1.1, current tag v1.0.1.2 (due to github.run_attempt change).
+                # This indicates a new build/release for the same code commit.
+                CHANGELOG_TITLE="### 🛠️ Build Update (from $LATEST_TAG to $CURRENT_TAG_BEING_CREATED)"
+                COMMIT_LOG_ENTRIES="No new code commits since $LATEST_TAG (at commit ${{ github.sha }}). This release ($CURRENT_TAG_BEING_CREATED) likely involves build process changes, a re-run, or workflow modifications."
+              fi
+            else
+              # LATEST_TAG is an ancestor of HEAD. Log changes between LATEST_TAG and HEAD.
+              CHANGELOG_TITLE="### 🚀 What's New (since $LATEST_TAG)"
+              COMMIT_LOG_ENTRIES=$(git log $LATEST_TAG..HEAD --pretty=format:'- %s (%h)' --abbrev-commit)
+              if [ -z "$COMMIT_LOG_ENTRIES" ]; then
+                # This can happen if the range $LATEST_TAG..HEAD contains only merge commits that don't show with this format,
+                # or if there are other unusual history circumstances.
+                COMMIT_LOG_ENTRIES="No distinct commits found between $LATEST_TAG and HEAD using the current log format. This might indicate merge commits without individual changes, or that changes are not captured by this log."
+              fi
+            fi
+          fi
+
+          FULL_CHANGELOG="$CHANGELOG_TITLE\n\n$COMMIT_LOG_ENTRIES"
+
+          echo "Generated changelog:"
+          echo -e "$FULL_CHANGELOG"
+
+          # Using GITHUB_OUTPUT multiline string syntax
+          # See: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          echo "changelog_text<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$FULL_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Download all build artifacts
@@ -136,6 +204,9 @@ jobs:
           body: |
             Automated release for commit ${{ github.sha }}.
             Application version: ${{ steps.release_info.outputs.app_version_for_display }}
+
+            ${{ steps.changelog.outputs.changelog_text }}
+
             Builds for Windows, macOS, and Linux are attached.
           draft: false
           prerelease: false
