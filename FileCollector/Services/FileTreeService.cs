@@ -51,7 +51,7 @@ public class FileTreeService(
             try
             {
                 allEntries = await Task.Run(() =>
-                    _ioService.GetFileSystemEntriesRecursive(currentProcessingPath).ToList());
+                    IoService.GetFileSystemEntriesRecursive(currentProcessingPath).ToList());
             }
             catch (UnauthorizedAccessException ex)
             {

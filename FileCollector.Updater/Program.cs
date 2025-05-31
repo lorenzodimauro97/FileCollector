@@ -51,7 +51,7 @@ internal class Program
             Log.Verbose("Effective Updater Directory for Logs: {EffectiveLogDir}", updaterDirectory);
             Log.Verbose("Log File Path: {LogFilePath}", logFilePath);
             Log.Verbose("Command line arguments: {ArgsCount} arguments", args.Length);
-            for (int i = 0; i < args.Length; i++)
+            for (var i = 0; i < args.Length; i++)
             {
                 Log.Verbose("Arg[{Index}]: {Argument}", i, args[i]);
             }

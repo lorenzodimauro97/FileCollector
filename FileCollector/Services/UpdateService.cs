@@ -143,7 +143,7 @@ public class UpdateService
 
 
             var latestVersionStringFromTag = latestRelease.TagName.TrimStart('v');
-            if (!LargeVersion.TryParse(latestVersionStringFromTag, out LargeVersion? latestVersion) ||
+            if (!LargeVersion.TryParse(latestVersionStringFromTag, out var latestVersion) ||
                 latestVersion == null)
             {
                 _logger.LogWarning("Could not parse latest release version from tag: {TagName} (Raw: {RawTag})",
@@ -157,7 +157,7 @@ public class UpdateService
 
             if (latestVersion.CompareTo(currentVersion) > 0)
             {
-                string expectedAssetName = GetPlatformSpecificAssetFileName();
+                var expectedAssetName = GetPlatformSpecificAssetFileName();
                 var asset = latestRelease.Assets.FirstOrDefault(a =>
                     a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
                 if (asset == null)
@@ -204,7 +204,7 @@ public class UpdateService
         }
 
         var appSettings = await SettingsService.GetAppSettingsAsync();
-        string expectedAssetName = GetPlatformSpecificAssetFileName();
+        var expectedAssetName = GetPlatformSpecificAssetFileName();
         var asset = _updateStateService.AvailableUpdateInfo.Assets.FirstOrDefault(a =>
             a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
 
@@ -326,7 +326,7 @@ public class UpdateService
                         updaterTempPath);
                 }
 
-                string? mainModuleFileName = Process.GetCurrentProcess().MainModule?.FileName;
+                var mainModuleFileName = Process.GetCurrentProcess().MainModule?.FileName;
                 string mainAppExeNameToPass;
 
                 if (string.IsNullOrEmpty(mainModuleFileName))
@@ -352,7 +352,7 @@ public class UpdateService
                 processStartInfo.ArgumentList.Add(appSettingsBackupPath);
                 
                 _logger.LogInformation("Launching updater: {FileName} with {ArgCount} arguments.", processStartInfo.FileName, processStartInfo.ArgumentList.Count);
-                for(int i = 0; i < processStartInfo.ArgumentList.Count; i++)
+                for(var i = 0; i < processStartInfo.ArgumentList.Count; i++)
                 {
                     _logger.LogInformation("Arg[{Index}]: {ArgumentValue}", i, processStartInfo.ArgumentList[i]);
                 }

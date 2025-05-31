@@ -2,7 +2,6 @@
 @inject SettingsService SettingsSvc
 @inject ILogger<Settings> Logger
 @using System.Text.Json
-@using System.Threading
 @implements IAsyncDisposable
 
 <div class="page-settings-container">
@@ -39,6 +38,19 @@
     }
     else
     {
+        <div class="settings-section">
+            <h4 class="panel-title">General Output Settings</h4>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="privatizeDataCheckbox"
+                       @bind="_appSettings.PrivatizeDataInOutput" @bind:after="MarkAsDirty"
+                       disabled="@_isBusy">
+                <label class="form-check-label" for="privatizeDataCheckbox">
+                    Default: Redact all values in common configuration files (e.g., appsettings.json, .env)
+                </label>
+                <div class="form-text">This sets the default behavior for the "Privatize Data" toggle on the main page. When enabled, all values in supported configuration files will be replaced with "[REDACTED]".</div>
+            </div>
+        </div>
+
         <div class="settings-section">
             <h4 class="panel-title">Ignore Patterns</h4>
             <p class="text-muted small">Manage files and folders to ignore. Patterns follow .gitignore syntax (e.g., <code>node_modules/</code>, <code>*.log</code>, <code>temp/</code>).</p>
@@ -317,7 +329,6 @@
     
     private void TimerElapsedCallback(object? state)
     {
-        // Fire-and-forget the async task. This runs on a ThreadPool thread.
         _ = PerformTimerActionAsync();
     }
 
@@ -331,11 +342,8 @@
                 return;
             }
 
-            // Marshal the UI update to Blazor's synchronization context.
             await InvokeAsync(() =>
             {
-                // Re-check IsDisposed after marshalling, as the component could have been disposed
-                // in the meantime.
                 if (IsDisposed)
                 {
                     Logger.LogDebug("PerformTimerActionAsync (on sync context): Component is disposed, skipping status message clear.");
@@ -347,7 +355,6 @@
         }
         catch (ObjectDisposedException)
         {
-            // This can happen if InvokeAsync is called after the component (or its renderer) is disposed.
             Logger.LogDebug("PerformTimerActionAsync: InvokeAsync failed, component (or renderer) likely disposed.");
         }
         catch (Exception ex)

@@ -47,9 +47,9 @@ public class LargeVersion : IComparable<LargeVersion>
 
         long[] numParts = [0, 0, 0, 0];
 
-        for (int i = 0; i < parts.Length; i++)
+        for (var i = 0; i < parts.Length; i++)
         {
-            if (!long.TryParse(parts[i], out long val) || val < 0)
+            if (!long.TryParse(parts[i], out var val) || val < 0)
             {
                 return false;
             }
@@ -66,13 +66,13 @@ public class LargeVersion : IComparable<LargeVersion>
     {
         if (other == null) return 1; 
 
-        int majorCompare = Major.CompareTo(other.Major);
+        var majorCompare = Major.CompareTo(other.Major);
         if (majorCompare != 0) return majorCompare;
 
-        int minorCompare = Minor.CompareTo(other.Minor);
+        var minorCompare = Minor.CompareTo(other.Minor);
         if (minorCompare != 0) return minorCompare;
 
-        int buildCompare = Build.CompareTo(other.Build);
+        var buildCompare = Build.CompareTo(other.Build);
         if (buildCompare != 0) return buildCompare;
 
         return Revision.CompareTo(other.Revision);

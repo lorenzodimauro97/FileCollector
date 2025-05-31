@@ -44,15 +44,27 @@
     </div>
 </div>
 
-<div class="form-check mb-3">
-    <input class="form-check-input" type="checkbox" id="includeFileTreeCheckbox"
-           checked="@IncludeFileTreeInOutput"
-           @onchange="HandleIncludeFileTreeChanged"
-           disabled="@(IsMergingContent || string.IsNullOrEmpty(CurrentDisplayRootPath))">
-    <label class="form-check-label small" for="includeFileTreeCheckbox">
-        Include full file/folder tree in output
-    </label>
+<div class="d-flex flex-wrap gap-3 mb-3">
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="includeFileTreeCheckbox"
+               checked="@IncludeFileTreeInOutput"
+               @onchange="HandleIncludeFileTreeChanged"
+               disabled="@(IsMergingContent || string.IsNullOrEmpty(CurrentDisplayRootPath))">
+        <label class="form-check-label small" for="includeFileTreeCheckbox">
+            Include full file/folder tree in output
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="privatizeDataCheckboxOutput"
+               checked="@PrivatizeDataInOutput"
+               @onchange="HandlePrivatizeDataChanged"
+               disabled="@IsMergingContent">
+        <label class="form-check-label small" for="privatizeDataCheckboxOutput">
+            Privatize Data (redact values in config files)
+        </label>
+    </div>
 </div>
+
 
 @code {
     [Parameter] public bool IsMergingContent { get; set; }
@@ -61,6 +73,7 @@
     [Parameter] public string MergeErrorMessage { get; set; } = "";
     [Parameter] public string UserPromptValue { get; set; } = "";
     [Parameter] public bool IncludeFileTreeInOutput { get; set; }
+    [Parameter] public bool PrivatizeDataInOutput { get; set; }
     [Parameter] public string? CurrentDisplayRootPath { get; set; }
 
     [Parameter] public EventCallback OnGenerateMergedContentClicked { get; set; }
@@ -68,12 +81,21 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnUserPromptInputChanged { get; set; }
     [Parameter] public EventCallback OnClearUserPromptClicked { get; set; }
     [Parameter] public EventCallback<bool> OnIncludeFileTreeInOutputChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnPrivatizeDataInOutputChanged { get; set; }
 
     private async Task HandleIncludeFileTreeChanged(ChangeEventArgs e)
     {
         if (e.Value is bool val)
         {
             await OnIncludeFileTreeInOutputChanged.InvokeAsync(val);
+        }
+    }
+
+    private async Task HandlePrivatizeDataChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool val)
+        {
+            await OnPrivatizeDataInOutputChanged.InvokeAsync(val);
         }
     }
 }

@@ -116,16 +116,18 @@
         <div class="content-actions-area">
             <MergedContentControls IsMergingContent="_isMergingContent"
                                    MergedContentTokenCount="_mergedContentTokenCount"
-                                   CanGenerateOrCopy="@(!string.IsNullOrEmpty(_mergedFileContentPlainText) || _includeFileTreeInOutput)"
+                                   CanGenerateOrCopy="@(!string.IsNullOrEmpty(_mergedFileContentPlainText) || _includeFileTreeInOutput || _privatizeDataInOutput)"
                                    MergeErrorMessage="@_mergeErrorMessage"
                                    UserPromptValue="@_userPrompt"
                                    IncludeFileTreeInOutput="_includeFileTreeInOutput"
+                                   PrivatizeDataInOutput="_privatizeDataInOutput"
                                    CurrentDisplayRootPath="@_currentDisplayRootPath"
                                    OnGenerateMergedContentClicked="GenerateMergedContentAsync"
                                    OnCopyMergedContentToClipboardClicked="CopyMergedContentToClipboardAsync"
                                    OnUserPromptInputChanged="HandleUserPromptInput"
                                    OnClearUserPromptClicked="ClearUserPromptAndRefresh"
-                                   OnIncludeFileTreeInOutputChanged="HandleIncludeFileTreeInOutputChangedAsync"/>
+                                   OnIncludeFileTreeInOutputChanged="HandleIncludeFileTreeInOutputChangedAsync"
+                                   OnPrivatizeDataInOutputChanged="HandlePrivatizeDataInOutputChangedAsync"/>
         </div>
 
         <div class="merged-content-viewer scrollable-area">
@@ -156,6 +158,7 @@
     private Timer? _userPromptDebounceTimer;
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(500);
     private bool _includeFileTreeInOutput;
+    private bool _privatizeDataInOutput;
 
     private AppSettings? _appSettings;
     private string _contextStatusMessage = "";
@@ -179,6 +182,9 @@
     protected override async Task OnInitializedAsync()
     {
         _appSettings = await SettingsService.GetAppSettingsAsync();
+        _includeFileTreeInOutput = false; // Default session value
+        _privatizeDataInOutput = _appSettings.PrivatizeDataInOutput; // Initialize from persisted settings
+
         var persistedState = NavStateService.ConsumePersistedState();
 
         if (persistedState?.RootPath != null)
@@ -395,6 +401,12 @@
         await GenerateMergedContentAsync();
     }
 
+    private async Task HandlePrivatizeDataInOutputChangedAsync(bool newValue)
+    {
+        _privatizeDataInOutput = newValue;
+        await GenerateMergedContentAsync();
+    }
+
     private async void DebouncedUserPromptAction(object? state)
     {
         try { await InvokeAsync(GenerateMergedContentAsync); }
@@ -454,7 +466,8 @@
             string.IsNullOrWhiteSpace(_appSettings.PrePrompt) && 
             string.IsNullOrWhiteSpace(_userPrompt) && 
             string.IsNullOrWhiteSpace(_appSettings.PostPrompt) &&
-            !_includeFileTreeInOutput)
+            !_includeFileTreeInOutput &&
+            !_privatizeDataInOutput) // Check _privatizeDataInOutput as well, though it usually implies files
         {
             _mergedFileContentPlainText = "";
             _mergedContentTokenCount = 0;
@@ -468,7 +481,8 @@
             _userPrompt, 
             _currentDisplayRootPath,
             _includeFileTreeInOutput,
-            DisplayRootItems); // Pass DisplayRootItems for tree generation
+            _privatizeDataInOutput, // Pass the new flag
+            DisplayRootItems); 
             
         _mergedFilesToDisplay = result.MergedFilesToDisplay;
         _mergedFileContentPlainText = result.MergedFileContentPlainText;
@@ -517,7 +531,7 @@
         }
         else
         {
-            _appSettings.SavedContexts.Add(new SavedContext { Name = trimmedName, RootPath = _currentDisplayRootPath, SelectedFilePaths = new List<string>(actualSelectedFiles) });
+            _appSettings.SavedContexts.Add(new SavedContext { Name = trimmedName, RootPath = _currentDisplayRootPath, SelectedFilePaths = [..actualSelectedFiles] });
             _contextStatusMessage = $"Context '{trimmedName}' saved.";
         }
         _contextStatusIsError = false;

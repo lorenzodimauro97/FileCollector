@@ -6,7 +6,7 @@ namespace FileCollector.Services.Settings;
 
 public class IoService
 {
-    public IEnumerable<string> GetFileSystemEntriesRecursive(
+    public static IEnumerable<string> GetFileSystemEntriesRecursive(
         string directoryPath,
         string searchPattern = "*",
         bool ignoreInaccessible = true)

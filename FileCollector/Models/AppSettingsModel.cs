@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿
+using System.Collections.Generic;
 
 namespace FileCollector.Models;
 
@@ -14,7 +15,7 @@ public class UpdateSettings
     public string GitHubRepoOwner { get; set; } = "lorenzodimauro97";
     public string GitHubRepoName { get; set; } = "FileCollector";
     public bool CheckForUpdatesOnStartup { get; set; } = true;
-    public string UpdaterExecutableName { get; set; } = "FileCollector.Updater.exe"; // Or similar
+    public string UpdaterExecutableName { get; set; } = "FileCollector.Updater.exe";
 }
 
 public class AppSettings
@@ -24,6 +25,7 @@ public class AppSettings
     public string PostPrompt { get; set; } = string.Empty;
     public List<SavedContext> SavedContexts { get; set; } = [];
     public UpdateSettings Update { get; set; } = new();
+    public bool PrivatizeDataInOutput { get; set; }
 }
     
 public class AppConfiguration
