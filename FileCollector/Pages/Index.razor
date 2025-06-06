@@ -90,9 +90,9 @@
             </div>
             <div class="panel-section">
                 <h4 class="panel-title">
-                    Selected Files (@SelectedFileNodes.Count(node => !node.IsDirectory))
+                    Selected Files (@SelectedFileDisplayItems.Count)
                 </h4>
-                <SelectedFilesPanel SelectedFileNodes="SelectedFileNodes"
+                <SelectedFilesPanel SelectedFileDisplayItems="SelectedFileDisplayItems"
                                     IsLoading="_isLoading"
                                     OnClearAllSelectionsClicked="ClearAllSelectionsAsync"/>
             </div>
@@ -172,11 +172,10 @@
     private readonly TimeSpan _searchDebounceTime = TimeSpan.FromMilliseconds(300);
     private bool _isPerformingSearch;
 
-    private List<FileSystemItem> SelectedFileNodes => _selectedFilePaths
-        .Select(GetNodeByPath)
-        .Where(node => node is { IsDirectory: false })
-        .OrderBy(node => node!.FullPath)
-        .OfType<FileSystemItem>()
+    private List<MergedFileDisplayItem> SelectedFileDisplayItems => _mergedFilesToDisplay
+        .Where(item => !item.FilePath.StartsWith("SYSTEM_", StringComparison.OrdinalIgnoreCase) && item.ErrorMessage is null)
+        .OrderByDescending(item => item.TokenCount)
+        .ThenBy(item => item.FilePath)
         .ToList();
 
     protected override async Task OnInitializedAsync()

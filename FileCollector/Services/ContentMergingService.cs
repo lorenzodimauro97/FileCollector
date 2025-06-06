@@ -275,7 +275,8 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                 FilePath = "SYSTEM_PRE_PROMPT",
                 RelativePath = "Pre-Prompt",
                 Content = appSettings.PrePrompt,
-                Language = plainTextLanguage
+                Language = plainTextLanguage,
+                TokenCount = 0
             });
             AppendSectionToPlainText(sbPlainText, "Pre-Prompt", appSettings.PrePrompt);
         }
@@ -291,7 +292,8 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                     FilePath = "SYSTEM_FILE_TREE",
                     RelativePath = "Project File Tree",
                     Content = treeStructureString,
-                    Language = plainTextLanguage
+                    Language = plainTextLanguage,
+                    TokenCount = 0
                 });
                 AppendSectionToPlainText(sbPlainText, "Project File Tree", treeStructureString);
             }
@@ -305,7 +307,8 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                     RelativePath = "Project File Tree (Error)",
                     Content = treeErrorMessage,
                     Language = plainTextLanguage,
-                    ErrorMessage = treeErrorMessage
+                    ErrorMessage = treeErrorMessage,
+                    TokenCount = 0
                 });
                 AppendSectionToPlainText(sbPlainText, "Project File Tree (Error)", treeErrorMessage, isError: true);
                 if (string.IsNullOrEmpty(overallErrorMessage)) overallErrorMessage = "Error generating file tree.";
@@ -325,6 +328,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                 string fileContent;
                 string? errorMessage = null;
                 var langDef = GetLanguageDefinitionByFileName(fileNode.Name);
+                var tokenCount = 0;
 
                 try
                 {
@@ -353,6 +357,8 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                             "[GenerateMergedContentAsync] No redaction performed for '{FileName}'. (privatizeDataInOutput: {PrivatizeFlag}, isConfigFile: {IsConfig})",
                             fileNode.Name, privatizeDataInOutput, isConfigFile);
                     }
+                    
+                    tokenCount = fileContent.Length / 4;
 
                     AppendSectionToPlainText(sbPlainText, fileNode.FullPath, fileContent);
                 }
@@ -363,6 +369,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                     errorMessage = $"ERROR reading file: {ex.Message.Shorten(150)}";
                     fileContent = $"// {errorMessage}";
                     langDef = plainTextLanguage;
+                    tokenCount = 0;
 
                     AppendSectionToPlainText(sbPlainText, fileNode.FullPath, errorMessage, isError: true);
 
@@ -384,7 +391,8 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                     RelativePath = relativePathForDisplay,
                     Content = fileContent,
                     Language = langDef,
-                    ErrorMessage = errorMessage
+                    ErrorMessage = errorMessage,
+                    TokenCount = tokenCount
                 });
             }
         }
@@ -401,7 +409,8 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                 FilePath = "SYSTEM_USER_PROMPT",
                 RelativePath = "User Prompt",
                 Content = userPrompt,
-                Language = plainTextLanguage
+                Language = plainTextLanguage,
+                TokenCount = 0
             });
             AppendSectionToPlainText(sbPlainText, "User Prompt", userPrompt);
         }
@@ -414,7 +423,8 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
                 FilePath = "SYSTEM_POST_PROMPT",
                 RelativePath = "Post-Prompt",
                 Content = appSettings.PostPrompt,
-                Language = plainTextLanguage
+                Language = plainTextLanguage,
+                TokenCount = 0
             });
             AppendSectionToPlainText(sbPlainText, "Post-Prompt", appSettings.PostPrompt);
         }

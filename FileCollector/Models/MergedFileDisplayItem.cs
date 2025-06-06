@@ -9,4 +9,5 @@ public class MergedFileDisplayItem
     public required string Content { get; set; }
     public required ILanguageDefinition Language { get; set; }
     public string? ErrorMessage { get; set; }
+    public int TokenCount { get; set; }
 }

@@ -1,18 +1,19 @@
-﻿@if (SelectedFileNodes.Any())
+﻿@if (SelectedFileDisplayItems.Any())
 {
     <div class="selected-files-list scrollable-area-sm list-group">
-        @foreach (var node in SelectedFileNodes)
+        @foreach (var item in SelectedFileDisplayItems)
         {
             <div class="list-group-item list-group-item-action d-flex align-items-center py-1 px-2">
                 @{
-                    var (icon, color) = IconHelper.GetIconForItem(node.Name, node.IsDirectory, node.IsExpanded);
+                    var (icon, color) = IconHelper.GetIconForItem(item.RelativePath, false, false);
                 }
                 <TablerIcon
                     OutlineIcon="@icon"
                     Size="18px"
                     Class="me-2 flex-shrink-0"
                     Color="@color"/>
-                <span class="text-truncate" title="@node.FullPath">@node.Name</span>
+                <span class="text-truncate" title="@item.FilePath">@item.RelativePath</span>
+                <span class="ms-auto text-muted small" style="flex-shrink: 0;">~@item.TokenCount tk</span>
             </div>
         }
     </div>
@@ -28,7 +29,7 @@ else
 }
 
 @code {
-    [Parameter] public List<FileSystemItem> SelectedFileNodes { get; set; } = [];
+    [Parameter] public List<MergedFileDisplayItem> SelectedFileDisplayItems { get; set; } = [];
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public EventCallback OnClearAllSelectionsClicked { get; set; }
 }
