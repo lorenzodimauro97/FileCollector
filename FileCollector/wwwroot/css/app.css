@@ -102,7 +102,7 @@ app {
 
 .sidebar {
     background-color: var(--sidebar-bg);
-    width: 220px;
+    width: 145px;
     transition: width 0.2s ease-in-out;
 }
 
