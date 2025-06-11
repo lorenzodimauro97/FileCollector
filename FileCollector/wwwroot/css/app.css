@@ -385,7 +385,7 @@ app {
 
 .left-panel {
     flex: 0 0 320px;
-    min-width: 280px;
+    min-width: 45vh;
 }
 
 .right-panel {
