@@ -1,0 +1,53 @@
+﻿/* The outer container or "track" of the progress bar */
+.progress-container {
+    width: 100%;
+    height: 16px;
+    background-color: #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* The inner bar. NOTE: background-color and width are now set via inline style. */
+.progress-bar {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* This transition still works perfectly on the inline 'width' property */
+    transition: width 0.3s ease-out;
+}
+
+.progress-label {
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: sans-serif;
+    white-space: nowrap;
+}
+
+
+/* --- Indeterminate State Animation --- */
+
+/* When the container has the 'indeterminate' class, we add the animation overlay */
+.progress-container.indeterminate .progress-bar {
+    /* The shine effect is a gradient that slides over the bar's background color */
+    background-image: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.5) 50%,
+            rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: indeterminate-shine 1.5s linear infinite;
+}
+
+@keyframes indeterminate-shine {
+    from {
+        background-position: 200% 0;
+    }
+    to {
+        background-position: -200% 0;
+    }
+}

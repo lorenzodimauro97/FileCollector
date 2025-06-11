@@ -1,0 +1,51 @@
+﻿@*
+    A simple, self-reliant linear progress bar component with no external dependencies.
+*@
+
+<div class="progress-container @(Indeterminate ? "indeterminate" : "")" 
+     role="progressbar" 
+     aria-valuenow="@Value" 
+     aria-valuemin="0" 
+     aria-valuemax="@Max">
+    
+    <div class="progress-bar" style="@ProgressBarStyle">
+        @if (ShowValue && !Indeterminate)
+        {
+            <span class="progress-label">@DisplayValue</span>
+        }
+    </div>
+
+</div>
+
+@code {
+    [Parameter] public double Value { get; set; } = 0;
+    [Parameter] public double Max { get; set; } = 100;
+    [Parameter] public bool ShowValue { get; set; } = false;
+    [Parameter] public string Color { get; set; } = "#2196F3";
+    [Parameter] public bool Indeterminate { get; set; } = false;
+    
+    private double Percentage => Max > 0 ? (Value / Max) * 100 : 0;
+    private string DisplayValue => $"{Percentage:0}%";
+
+    /// <summary>
+    /// Generates the complete inline style for the progress bar.
+    /// This is the key to fixing the rendering bug.
+    /// </summary>
+    private string ProgressBarStyle
+    {
+        get
+        {
+            // For the indeterminate state, we just need the background color and full width.
+            // The animation is handled by the CSS classes.
+            if (Indeterminate)
+            {
+                return $"background-color: {Color}; width: 100%;";
+            }
+            // For the determinate state, we bind both the color and the calculated width.
+            else
+            {
+                return $"background-color: {Color}; width: {Percentage}%;";
+            }
+        }
+    }
+}

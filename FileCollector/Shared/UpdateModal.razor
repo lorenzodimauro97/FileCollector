@@ -56,15 +56,9 @@
                         <p>Processing update status...</p>
                     }
 
-                    @if (UpdateStateSvc.CurrentState == UpdateProcessState.Downloading || UpdateStateSvc.CurrentState == UpdateProcessState.Extracting)
+                    @if (UpdateStateSvc.CurrentState is UpdateProcessState.Downloading or UpdateProcessState.Extracting)
                     {
-                        <div class="progress mt-3">
-                            <div class="progress-bar @(UpdateStateSvc.CurrentState == UpdateProcessState.Error ? "bg-danger" : "progress-bar-striped progress-bar-animated")"
-                                 role="progressbar" style="width: @UpdateStateSvc.Progress%;"
-                                 aria-valuenow="@UpdateStateSvc.Progress" aria-valuemin="0" aria-valuemax="100">
-                                @(UpdateStateSvc.Progress.ToString("F0"))%
-                            </div>
-                        </div>
+                            <ProgressBar Value="@((int)UpdateStateSvc.Progress)" Max="100" ShowValue="true" Color="green"></ProgressBar>
                     }
                 </div>
                 <div class="modal-footer">
