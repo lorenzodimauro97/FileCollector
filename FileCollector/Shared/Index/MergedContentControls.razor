@@ -39,8 +39,16 @@
             <TablerIcon OutlineIcon="@TablerIconOutlineName.ClearAll" Size="16px"/>
         </button>
     </div>
-    <div class="form-text">This prompt is not saved. It appears after files and before the Post-Prompt.
-        Refreshes automatically after you stop typing.
+    <div class="form-text">
+        This prompt is not saved. It appears after files and before the Post-Prompt.
+        @if (IsAutoRefreshEnabled)
+        {
+            <span>Refreshes automatically after you stop typing.</span>
+        }
+        else
+        {
+            <span>Auto-refresh is off; click "Refresh" to update content.</span>
+        }
     </div>
 </div>
 
@@ -63,6 +71,16 @@
             Privatize Data (redact values in config files)
         </label>
     </div>
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="autoRefreshSwitch"
+               checked="@IsAutoRefreshEnabled"
+               @onchange="HandleAutoRefreshChanged"
+               role="switch"
+               disabled="@IsMergingContent">
+        <label class="form-check-label small" for="autoRefreshSwitch">
+            Auto-refresh prompt
+        </label>
+    </div>
 </div>
 
 
@@ -75,6 +93,7 @@
     [Parameter] public bool IncludeFileTreeInOutput { get; set; }
     [Parameter] public bool PrivatizeDataInOutput { get; set; }
     [Parameter] public string? CurrentDisplayRootPath { get; set; }
+    [Parameter] public bool IsAutoRefreshEnabled { get; set; }
 
     [Parameter] public EventCallback OnGenerateMergedContentClicked { get; set; }
     [Parameter] public EventCallback OnCopyMergedContentToClipboardClicked { get; set; }
@@ -82,6 +101,7 @@
     [Parameter] public EventCallback OnClearUserPromptClicked { get; set; }
     [Parameter] public EventCallback<bool> OnIncludeFileTreeInOutputChanged { get; set; }
     [Parameter] public EventCallback<bool> OnPrivatizeDataInOutputChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnAutoRefreshEnabledChanged { get; set; }
 
     private async Task HandleIncludeFileTreeChanged(ChangeEventArgs e)
     {
@@ -96,6 +116,14 @@
         if (e.Value is bool val)
         {
             await OnPrivatizeDataInOutputChanged.InvokeAsync(val);
+        }
+    }
+
+    private async Task HandleAutoRefreshChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool val)
+        {
+            await OnAutoRefreshEnabledChanged.InvokeAsync(val);
         }
     }
 }

@@ -123,12 +123,14 @@
                                    IncludeFileTreeInOutput="_includeFileTreeInOutput"
                                    PrivatizeDataInOutput="_privatizeDataInOutput"
                                    CurrentDisplayRootPath="@_currentDisplayRootPath"
+                                   IsAutoRefreshEnabled="_isAutoRefreshEnabled"
                                    OnGenerateMergedContentClicked="GenerateMergedContentAsync"
                                    OnCopyMergedContentToClipboardClicked="CopyMergedContentToClipboardAsync"
                                    OnUserPromptInputChanged="HandleUserPromptInput"
                                    OnClearUserPromptClicked="ClearUserPromptAndRefresh"
                                    OnIncludeFileTreeInOutputChanged="HandleIncludeFileTreeInOutputChangedAsync"
-                                   OnPrivatizeDataInOutputChanged="HandlePrivatizeDataInOutputChangedAsync"/>
+                                   OnPrivatizeDataInOutputChanged="HandlePrivatizeDataInOutputChangedAsync"
+                                   OnAutoRefreshEnabledChanged="HandleAutoRefreshEnabledChangedAsync"/>
         </div>
 
         <div class="merged-content-viewer scrollable-area">
@@ -160,6 +162,7 @@
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(500);
     private bool _includeFileTreeInOutput;
     private bool _privatizeDataInOutput;
+    private bool _isAutoRefreshEnabled = true;
 
     private AppSettings? _appSettings;
     private string _contextStatusMessage = "";
@@ -391,10 +394,22 @@
     private async Task HandleUserPromptInput(ChangeEventArgs e)
     {
         _userPrompt = e.Value?.ToString() ?? "";
-        _userPromptDebounceTimer?.Change(_debounceTime, Timeout.InfiniteTimeSpan);
-        _userPromptDebounceTimer ??= new Timer(DebouncedUserPromptAction, null, _debounceTime, Timeout.InfiniteTimeSpan);
+        if (_isAutoRefreshEnabled)
+        {
+            _userPromptDebounceTimer?.Change(_debounceTime, Timeout.InfiniteTimeSpan);
+            _userPromptDebounceTimer ??= new Timer(DebouncedUserPromptAction, null, _debounceTime, Timeout.InfiniteTimeSpan);
+        }
     }
     
+    private async Task HandleAutoRefreshEnabledChangedAsync(bool newValue)
+    {
+        _isAutoRefreshEnabled = newValue;
+        if (_isAutoRefreshEnabled)
+        {
+            await GenerateMergedContentAsync();
+        }
+    }
+
     private async Task HandleIncludeFileTreeInOutputChangedAsync(bool newValue)
     {
         _includeFileTreeInOutput = newValue;
@@ -409,6 +424,7 @@
 
     private async void DebouncedUserPromptAction(object? state)
     {
+        if (!_isAutoRefreshEnabled) return;
         try { await InvokeAsync(GenerateMergedContentAsync); }
         catch (ObjectDisposedException) { Logger.LogDebug("DebouncedUserPromptAction skipped: component disposed."); }
         catch (Exception ex)
