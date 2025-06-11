@@ -14,6 +14,11 @@
                     Color="@color"/>
                 <span class="text-truncate" title="@item.FilePath">@item.RelativePath</span>
                 <span class="ms-auto text-muted small" style="flex-shrink: 0;">~@item.TokenCount tk</span>
+                <button class="btn btn-subtle-danger ms-1 p-1" style="line-height: 1"
+                        @onclick="() => OnRemoveFileClicked.InvokeAsync(item.FilePath)"
+                        disabled="@IsLoading" title="Remove">
+                    <TablerIcon OutlineIcon="@TablerIconOutlineName.X" Size="14px"/>
+                </button>
             </div>
         }
     </div>
@@ -32,4 +37,5 @@ else
     [Parameter] public List<MergedFileDisplayItem> SelectedFileDisplayItems { get; set; } = [];
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public EventCallback OnClearAllSelectionsClicked { get; set; }
+    [Parameter] public EventCallback<string> OnRemoveFileClicked { get; set; }
 }

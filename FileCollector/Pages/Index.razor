@@ -94,7 +94,8 @@
                 </h4>
                 <SelectedFilesPanel SelectedFileDisplayItems="SelectedFileDisplayItems"
                                     IsLoading="_isLoading"
-                                    OnClearAllSelectionsClicked="ClearAllSelectionsAsync"/>
+                                    OnClearAllSelectionsClicked="ClearAllSelectionsAsync"
+                                    OnRemoveFileClicked="HandleRemoveFileAsync"/>
             </div>
             <div class="panel-section">
                 <h4 class="panel-title">Saved Contexts</h4>
@@ -434,6 +435,18 @@
         _contextStatusMessage = "";
         await InvokeAsync(StateHasChanged);
         await GenerateMergedContentAsync();
+    }
+    
+    private async Task HandleRemoveFileAsync(string filePath)
+    {
+        _contextStatusMessage = "";
+        var nodeToRemove = GetNodeByPath(filePath);
+        if (nodeToRemove != null)
+        {
+            nodeToRemove.SetSelectionStatus(false, _selectedFilePaths);
+            nodeToRemove.UpdateParentSelectionStatus(_selectedFilePaths);
+            await GenerateMergedContentAsync();
+        }
     }
 
     private static void DeselectNodeAndChildrenRecursive(FileSystemItem node)
