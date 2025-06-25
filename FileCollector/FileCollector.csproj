@@ -39,12 +39,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="BlazorTablerIcons" Version="1.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0-preview.3.24172.9" /> <!-- Or the latest .NET 9 preview version -->
+		<PackageReference Include="BlazorTablerIcons" Version="1.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" /> <!-- Or the latest .NET 9 preview version -->
 		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
 		<PackageReference Include="S97SP.Prism.Blazor" Version="1.0.3" />
 		<PackageReference Include="Serilog" Version="4.3.0" />
-		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 		<PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
