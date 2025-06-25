@@ -338,12 +338,12 @@
         }
     }
 
-    private async Task RestoreFileSelectionsAsync(List<string> pathsToSelect)
+    private Task RestoreFileSelectionsAsync(List<string> pathsToSelect)
     {
         foreach (var trueRootItem in _trueRootItems) DeselectNodeAndChildrenRecursive(trueRootItem);
         _selectedFilePaths.Clear();
 
-        if (!_trueRootItems.Any() && !DisplayRootItems.Any()) return;
+        if (!_trueRootItems.Any() && !DisplayRootItems.Any()) return Task.CompletedTask;
 
         foreach (var path in pathsToSelect)
         {
@@ -351,26 +351,10 @@
             if (node is { IsDirectory: false })
             {
                 node.SetSelectionStatus(true, _selectedFilePaths);
+                node.UpdateParentSelectionStatus(_selectedFilePaths);
             }
         }
-        var uniqueParentPaths = new HashSet<string>();
-        foreach (var path in _selectedFilePaths.ToList())
-        {
-            var node = GetNodeByPath(path);
-            if (node?.Parent != null)
-            {
-                var allChildrenSelected = node.Parent.Children.All(c => c.IsSelected);
-                if (node.Parent.IsSelected != allChildrenSelected)
-                {
-                    uniqueParentPaths.Add(node.Parent.FullPath);
-                }
-            }
-        }
-        foreach (var parentPath in uniqueParentPaths)
-        {
-            var parentNode = GetNodeByPath(parentPath);
-            parentNode?.UpdateParentSelectionStatus(_selectedFilePaths);
-        }
+        return Task.CompletedTask;
     }
 
     private async Task HandleSelectionChangedAsync(FileSystemItem changedItem)
@@ -468,6 +452,7 @@
     private static void DeselectNodeAndChildrenRecursive(FileSystemItem node)
     {
         node.IsSelected = false;
+        node.IsPartiallySelected = false;
         if (node.IsDirectory) foreach (var child in node.Children) DeselectNodeAndChildrenRecursive(child);
     }
 
