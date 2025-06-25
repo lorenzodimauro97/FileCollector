@@ -30,5 +30,10 @@
             }
             return false;
         }
+    },
+    setCheckboxIndeterminate: function (element, isIndeterminate) {
+        if (element) {
+            element.indeterminate = isIndeterminate;
+        }
     }
 };

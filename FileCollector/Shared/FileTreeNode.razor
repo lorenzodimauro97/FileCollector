@@ -1,4 +1,6 @@
-﻿<div class="file-tree-node" style="@($"padding-left: {Level * IndentationSizePx}px;")">
+﻿@inject IJSRuntime JsRuntime
+
+<div class="file-tree-node" style="@($"padding-left: {Level * IndentationSizePx}px;")">
     <div class="node-content">
         @if (Node.IsDirectory)
         {
@@ -20,6 +22,7 @@
             <span class="node-expander-placeholder"></span>
         }
         <input type="checkbox" class="form-check-input node-checkbox"
+               @ref="_checkboxRef"
                checked="@Node.IsSelected"
                @onchange="HandleCheckboxChange"/>
 
@@ -57,7 +60,16 @@
     [Parameter] public EventCallback<FileSystemItem> OnSelectionChanged { get; set; }
     [Parameter] public int Level { get; set; }
 
+    private ElementReference _checkboxRef;
     private const int IndentationSizePx = 18;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Node.IsDirectory)
+        {
+            await JsRuntime.InvokeVoidAsync("blazorInterop.setCheckboxIndeterminate", _checkboxRef, Node.IsPartiallySelected);
+        }
+    }
 
     private void ToggleExpand()
     {

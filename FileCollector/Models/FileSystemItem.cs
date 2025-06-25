@@ -10,6 +10,7 @@ namespace FileCollector.Models
         public string FullPath { get; set; }
         public bool IsDirectory { get; set; }
         public bool IsSelected { get; set; }
+        public bool IsPartiallySelected { get; set; }
         public bool IsExpanded { get; set; }
         public FileSystemItem? Parent { get; set; }
         public List<FileSystemItem> Children { get; set; } = [];
@@ -26,6 +27,7 @@ namespace FileCollector.Models
             IsDirectory = isDirectory;
             Parent = parent;
             IsSelected = false;
+            IsPartiallySelected = false;
             IsExpanded = false;
         }
 
@@ -33,6 +35,7 @@ namespace FileCollector.Models
         public void SetSelectionStatus(bool selected, List<string> masterSelectedList)
         {
             IsSelected = selected;
+            IsPartiallySelected = false;
             if (selected)
             {
                 if (!masterSelectedList.Contains(FullPath))
@@ -58,13 +61,18 @@ namespace FileCollector.Models
         public void UpdateParentSelectionStatus(List<string> masterSelectedList)
         {
             if (Parent is not { IsDirectory: true }) return;
+            
+            var allChildrenSelected = Parent.Children.All(c => c.IsSelected && !c.IsPartiallySelected);
+            var noChildrenSelectedOrPartial = Parent.Children.All(c => !c.IsSelected && !c.IsPartiallySelected);
 
-
-            var allChildrenSelected = Parent.Children.All(c => c.IsSelected);
-
-            if (Parent.IsSelected != allChildrenSelected)
+            var newIsSelected = allChildrenSelected;
+            var newIsPartiallySelected = !allChildrenSelected && !noChildrenSelectedOrPartial;
+            
+            if (Parent.IsSelected != newIsSelected || Parent.IsPartiallySelected != newIsPartiallySelected)
             {
-                Parent.IsSelected = allChildrenSelected;
+                Parent.IsSelected = newIsSelected;
+                Parent.IsPartiallySelected = newIsPartiallySelected;
+
                 if (Parent.IsSelected)
                 {
                     if (!masterSelectedList.Contains(Parent.FullPath))
