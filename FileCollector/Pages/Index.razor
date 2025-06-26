@@ -119,14 +119,13 @@
                                    MergedContentTokenCount="_mergedContentTokenCount"
                                    CanGenerateOrCopy="@(!string.IsNullOrEmpty(_mergedFileContentPlainText) || _includeFileTreeInOutput || _privatizeDataInOutput)"
                                    MergeErrorMessage="@_mergeErrorMessage"
-                                   UserPromptValue="@_userPrompt"
+                                   @bind-UserPromptValue="UserPrompt"
                                    IncludeFileTreeInOutput="_includeFileTreeInOutput"
                                    PrivatizeDataInOutput="_privatizeDataInOutput"
                                    CurrentDisplayRootPath="@_currentDisplayRootPath"
                                    IsAutoRefreshEnabled="_isAutoRefreshEnabled"
                                    OnGenerateMergedContentClicked="GenerateMergedContentAsync"
                                    OnCopyMergedContentToClipboardClicked="CopyMergedContentToClipboardAsync"
-                                   OnUserPromptInputChanged="HandleUserPromptInput"
                                    OnClearUserPromptClicked="ClearUserPromptAndRefresh"
                                    OnIncludeFileTreeInOutputChanged="HandleIncludeFileTreeInOutputChangedAsync"
                                    OnPrivatizeDataInOutputChanged="HandlePrivatizeDataInOutputChangedAsync"
@@ -157,7 +156,7 @@
     private bool _isMergingContent;
     private string _mergeErrorMessage = "";
 
-    private string _userPrompt = "";
+    private string _userPromptValue = "";
     private Timer? _userPromptDebounceTimer;
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(500);
     private bool _includeFileTreeInOutput;
@@ -181,6 +180,22 @@
         .OrderByDescending(item => item.TokenCount)
         .ThenBy(item => item.FilePath)
         .ToList();
+
+    private string UserPrompt
+    {
+        get => _userPromptValue;
+        set
+        {
+            if (_userPromptValue == value) return;
+            _userPromptValue = value;
+
+            if (_isAutoRefreshEnabled)
+            {
+                _userPromptDebounceTimer?.Change(_debounceTime, Timeout.InfiniteTimeSpan);
+                _userPromptDebounceTimer ??= new Timer(DebouncedUserPromptAction, null, _debounceTime, Timeout.InfiniteTimeSpan);
+            }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -366,23 +381,13 @@
 
     private async Task ClearUserPromptAndRefresh()
     {
-        _userPrompt = "";
+        UserPrompt = "";
         if (_userPromptDebounceTimer != null)
         {
             await _userPromptDebounceTimer.DisposeAsync();
             _userPromptDebounceTimer = null;
         }
         await GenerateMergedContentAsync();
-    }
-
-    private async Task HandleUserPromptInput(ChangeEventArgs e)
-    {
-        _userPrompt = e.Value?.ToString() ?? "";
-        if (_isAutoRefreshEnabled)
-        {
-            _userPromptDebounceTimer?.Change(_debounceTime, Timeout.InfiniteTimeSpan);
-            _userPromptDebounceTimer ??= new Timer(DebouncedUserPromptAction, null, _debounceTime, Timeout.InfiniteTimeSpan);
-        }
     }
     
     private async Task HandleAutoRefreshEnabledChangedAsync(bool newValue)
@@ -477,7 +482,7 @@
         
         if (!filesToMerge.Any() && 
             string.IsNullOrWhiteSpace(_appSettings.PrePrompt) && 
-            string.IsNullOrWhiteSpace(_userPrompt) && 
+            string.IsNullOrWhiteSpace(_userPromptValue) && 
             string.IsNullOrWhiteSpace(_appSettings.PostPrompt) &&
             !_includeFileTreeInOutput &&
             !_privatizeDataInOutput) // Check _privatizeDataInOutput as well, though it usually implies files
@@ -491,7 +496,7 @@
         var result = await ContentMergerSvc.GenerateMergedContentAsync(
             filesToMerge, 
             _appSettings, 
-            _userPrompt, 
+            _userPromptValue, 
             _currentDisplayRootPath,
             _includeFileTreeInOutput,
             _privatizeDataInOutput, // Pass the new flag

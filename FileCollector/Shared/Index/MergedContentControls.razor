@@ -32,7 +32,7 @@
     <label for="userPrompt" class="form-label">User Prompt:</label>
     <div class="input-group">
         <textarea id="userPrompt" class="form-control" rows="3"
-                  value="@UserPromptValue" @oninput="OnUserPromptInputChanged"
+                  @bind="BoundUserPromptValue" @bind:event="oninput"
                   placeholder="Enter any specific instructions or questions here..."></textarea>
         <button class="btn btn-light" type="button" @onclick="OnClearUserPromptClicked"
                 title="Clear User Prompt">
@@ -90,6 +90,7 @@
     [Parameter] public bool CanGenerateOrCopy { get; set; }
     [Parameter] public string MergeErrorMessage { get; set; } = "";
     [Parameter] public string UserPromptValue { get; set; } = "";
+    [Parameter] public EventCallback<string> UserPromptValueChanged { get; set; }
     [Parameter] public bool IncludeFileTreeInOutput { get; set; }
     [Parameter] public bool PrivatizeDataInOutput { get; set; }
     [Parameter] public string? CurrentDisplayRootPath { get; set; }
@@ -97,11 +98,22 @@
 
     [Parameter] public EventCallback OnGenerateMergedContentClicked { get; set; }
     [Parameter] public EventCallback OnCopyMergedContentToClipboardClicked { get; set; }
-    [Parameter] public EventCallback<ChangeEventArgs> OnUserPromptInputChanged { get; set; }
     [Parameter] public EventCallback OnClearUserPromptClicked { get; set; }
     [Parameter] public EventCallback<bool> OnIncludeFileTreeInOutputChanged { get; set; }
     [Parameter] public EventCallback<bool> OnPrivatizeDataInOutputChanged { get; set; }
     [Parameter] public EventCallback<bool> OnAutoRefreshEnabledChanged { get; set; }
+
+    private string BoundUserPromptValue
+    {
+        get => UserPromptValue;
+        set
+        {
+            if (UserPromptValue != value)
+            {
+                UserPromptValueChanged.InvokeAsync(value);
+            }
+        }
+    }
 
     private async Task HandleIncludeFileTreeChanged(ChangeEventArgs e)
     {
