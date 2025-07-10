@@ -1,51 +1,86 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using FileCollector.Models;
+using Microsoft.Extensions.Logging;
 
 namespace FileCollector.Services;
 
 public static class PathConverterService
 {
-    public static List<FileSystemItem> BuildTree(IEnumerable<string> rawPaths)
+    public static List<FileSystemItem> BuildTree(IEnumerable<FileSystemInfo> infos, ILogger logger)
     {
-        var cleanedPaths = rawPaths
-            .Select(p => p.Trim())
-            .Where(p => !string.IsNullOrEmpty(p))
-            .Select(ExtractActualPath)
-            .Where(p => !string.IsNullOrEmpty(p))
-            .Distinct()
-            .OrderBy(p => p)
+        var overallStopwatch = Stopwatch.StartNew();
+        var stepStopwatch = Stopwatch.StartNew();
+
+        var infoList = infos.AsParallel().ToList();
+        
+        stepStopwatch.Stop();
+        logger.LogDebug("Perf: PathConverter.ToList completed in {ElapsedMilliseconds}ms.", stepStopwatch.ElapsedMilliseconds);
+        stepStopwatch.Restart();
+
+        if (infoList.Count == 0)
+        {
+            return [];
+        }
+
+        var allNodes = new ConcurrentDictionary<string, FileSystemItem>(StringComparer.OrdinalIgnoreCase);
+
+        infoList.AsParallel().ForAll(info =>
+        {
+            var isDirectory = info.Attributes.HasFlag(FileAttributes.Directory);
+            allNodes.TryAdd(info.FullName, new FileSystemItem(info.FullName, isDirectory));
+        });
+        
+        stepStopwatch.Stop();
+        logger.LogDebug("Perf: PathConverter.CreateNodes completed in {ElapsedMilliseconds}ms.", stepStopwatch.ElapsedMilliseconds);
+        stepStopwatch.Restart();
+
+        allNodes.Values.AsParallel().ForAll(node =>
+        {
+            var parentPath = Path.GetDirectoryName(node.FullPath);
+            if (!string.IsNullOrEmpty(parentPath) && allNodes.TryGetValue(parentPath, out var parentNode))
+            {
+                node.Parent = parentNode;
+            }
+        });
+        
+        stepStopwatch.Stop();
+        logger.LogDebug("Perf: PathConverter.AssignParents completed in {ElapsedMilliseconds}ms.", stepStopwatch.ElapsedMilliseconds);
+        stepStopwatch.Restart();
+        
+        var childrenByParent = allNodes.Values.AsParallel()
+            .Where(n => n.Parent != null)
+            .GroupBy(n => n.Parent!);
+
+        childrenByParent.ForAll(group =>
+        {
+            var parentNode = group.Key;
+            parentNode.Children = group.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            if (!parentNode.IsDirectory && parentNode.Children.Count > 0)
+            {
+                parentNode.IsDirectory = true;
+            }
+        });
+        
+        stepStopwatch.Stop();
+        logger.LogDebug("Perf: PathConverter.GroupAndAssignChildren completed in {ElapsedMilliseconds}ms.", stepStopwatch.ElapsedMilliseconds);
+        stepStopwatch.Restart();
+
+        var rootItems = allNodes.Values.AsParallel()
+            .Where(n => n.Parent == null)
+            .OrderBy(c => !c.IsDirectory)
+            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        var rootItems = new List<FileSystemItem>();
-        var allNodes = new Dictionary<string, FileSystemItem>();
-
-        foreach (var path in cleanedPaths)
-        {
-            if(path == null) throw new NullReferenceException("path is null");
             
-            AddPathToTree(path, rootItems, allNodes);
-        }
-
-
-        var allPathsCopy = new List<string>(allNodes.Keys);
-        foreach (var currentPath in allPathsCopy)
-        {
-            if (!allNodes.TryGetValue(currentPath, out var node)) continue;
-            if (!node.IsDirectory && node.Children.Count != 0)
-            {
-                node.IsDirectory = true;
-            }
-
-            var parentPath = Path.GetDirectoryName(currentPath);
-            if (!string.IsNullOrEmpty(parentPath) && !allNodes.ContainsKey(parentPath))
-            {
-                AddPathToTree(currentPath, rootItems, allNodes);
-            }
-        }
-
+        stepStopwatch.Stop();
+        logger.LogDebug("Perf: PathConverter.FinalizeRoots completed in {ElapsedMilliseconds}ms.", stepStopwatch.ElapsedMilliseconds);
+        
+        overallStopwatch.Stop();
+        logger.LogInformation("Perf: PathConverterService.BuildTree completed in {ElapsedMilliseconds}ms for {Count} paths.", overallStopwatch.ElapsedMilliseconds, infoList.Count);
 
         return rootItems;
     }
@@ -121,53 +156,5 @@ public static class PathConverterService
 
         Console.WriteLine($"Warning: Could not reliably extract path from: '{rawLine}'");
         return null;
-    }
-
-    private static void AddPathToTree(string path, List<FileSystemItem> rootItems,
-        Dictionary<string, FileSystemItem> allNodes)
-    {
-        if (string.IsNullOrEmpty(path) || allNodes.ContainsKey(path))
-        {
-            if (allNodes.TryGetValue(path, out var existingNode) && !existingNode.IsDirectory)
-            {
-            }
-
-            return;
-        }
-
-
-        var isLikelyDirectoryInitially = string.IsNullOrEmpty(Path.GetExtension(path));
-
-        FileSystemItem? parentNode = null;
-        var parentPath = Path.GetDirectoryName(path);
-
-        if (!string.IsNullOrEmpty(parentPath))
-        {
-            if (!allNodes.TryGetValue(parentPath, out parentNode))
-            {
-                AddPathToTree(parentPath, rootItems, allNodes);
-                parentNode = allNodes[parentPath];
-            }
-
-            if (parentNode is { IsDirectory: false })
-            {
-                parentNode.IsDirectory = true;
-            }
-        }
-
-
-        var newNode = new FileSystemItem(path, isLikelyDirectoryInitially, parentNode);
-        allNodes[path] = newNode;
-
-        if (parentNode != null)
-        {
-            parentNode.Children.Add(newNode);
-
-            if (!parentNode.IsDirectory) parentNode.IsDirectory = true;
-        }
-        else
-        {
-            rootItems.Add(newNode);
-        }
     }
 }

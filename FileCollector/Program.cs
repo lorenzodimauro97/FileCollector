@@ -20,7 +20,7 @@ internal class Program
             .MinimumLevel.Verbose() 
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.AspNetCore.Components.RenderTree", LogEventLevel.Information)
-            .MinimumLevel.Override("Photino.NET", LogEventLevel.Error)
+            .MinimumLevel.Override("Photino.NET", LogEventLevel.Warning)
             .Enrich.FromLogContext()
             .Enrich.WithThreadId()
             .WriteTo.Console(
@@ -74,9 +74,9 @@ internal class Program
             mainWindowInstance = app.MainWindow;
 
             app.MainWindow
+                .SetLogVerbosity(0)
                 .SetIconFile("icon.ico")
-                .SetTitle("File Collector")
-                .SetLogVerbosity(2); 
+                .SetTitle("File Collector");
 
             AppDomain.CurrentDomain.UnhandledException += (_, error) =>
             {

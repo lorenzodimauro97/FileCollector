@@ -1,49 +1,43 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using FileCollector.Models;
+using Microsoft.Extensions.Logging;
 
 namespace FileCollector.Services;
 
-public class GitIgnoreFilterService
+public class GitIgnoreFilterService(ILogger<GitIgnoreFilterService> logger)
 {
-    public IEnumerable<string> FilterPaths(IEnumerable<string> absolutePaths, IEnumerable<string> rawGitIgnorePatterns)
+    private readonly ILogger<GitIgnoreFilterService> _logger = logger;
+
+    public IEnumerable<FileSystemInfo> FilterInfos(IEnumerable<FileSystemInfo> infos, IEnumerable<string> rawGitIgnorePatterns)
     {
+        var stopwatch = Stopwatch.StartNew();
         var patterns = PreprocessRawPatterns(rawGitIgnorePatterns);
-        var includedPaths = new List<string>();
+        var includedInfos = new ConcurrentBag<FileSystemInfo>();
 
-        foreach (var absPath in absolutePaths)
+        var infoList = infos as ICollection<FileSystemInfo> ?? infos.ToList();
+        
+        infoList.AsParallel().ForAll(info =>
         {
-            if (string.IsNullOrWhiteSpace(absPath)) continue;
+            if (string.IsNullOrWhiteSpace(info.FullName)) return;
 
+            var normalizedPath = info.FullName.Replace('\\', '/');
+            var isDirectory = info.Attributes.HasFlag(FileAttributes.Directory);
 
-            var hasInvalidChars = false;
-            try
+            if (!IsPathExcluded(normalizedPath, patterns, isDirectory))
             {
-                if (absPath.IndexOfAny(System.IO.Path.GetInvalidPathChars()) != -1)
-                {
-                    hasInvalidChars = true;
-                }
+                includedInfos.Add(info);
             }
-            catch (ArgumentException)
-            {
-                hasInvalidChars = true;
-            }
+        });
 
-
-            if (hasInvalidChars || !(absPath.Contains(":/") || absPath.Contains(":\\")))
-            {
-                continue;
-            }
-
-            var normalizedPath = absPath.Replace('\\', '/');
-
-            if (!IsPathExcluded(normalizedPath, patterns))
-            {
-                includedPaths.Add(absPath);
-            }
-        }
-
-        return includedPaths;
+        stopwatch.Stop();
+        _logger.LogDebug("Perf: GitIgnoreFilterService.FilterInfos completed in {ElapsedMilliseconds}ms. Input: {InputCount}, Output: {OutputCount}", stopwatch.ElapsedMilliseconds, infoList.Count, includedInfos.Count);
+        
+        return includedInfos;
     }
 
     private static List<ProcessedPattern> PreprocessRawPatterns(IEnumerable<string> rawPatterns)
@@ -73,17 +67,10 @@ public class GitIgnoreFilterService
 
         return processed;
     }
-
-    private bool IsPathEffectivelyDirectory(string normalizedPath)
+    
+    private bool IsPathExcluded(string normalizedPath, List<ProcessedPattern> patterns, bool isDirectory)
     {
-        var fileName = System.IO.Path.GetFileName(normalizedPath.TrimEnd('/'));
-        return string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(System.IO.Path.GetExtension(fileName));
-    }
-
-    private bool IsPathExcluded(string normalizedPath, List<ProcessedPattern> patterns)
-    {
-        var pathOutcome =
-            GetMatchOutcomeForSpecificPath(normalizedPath, patterns, IsPathEffectivelyDirectory(normalizedPath));
+        var pathOutcome = GetMatchOutcomeForSpecificPath(normalizedPath, patterns, isDirectory);
 
         switch (pathOutcome)
         {
@@ -129,7 +116,7 @@ public class GitIgnoreFilterService
         var currentOutcome = MatchOutcome.NotMatched;
         foreach (var pPattern in patterns)
         {
-            if (pPattern.IsMatch(path, pathIsKnownToBeDirectory, IsPathEffectivelyDirectory))
+            if (pPattern.IsMatch(path, pathIsKnownToBeDirectory, (s) => true))
             {
                 currentOutcome = pPattern.IsNegation ? MatchOutcome.Included : MatchOutcome.Excluded;
             }

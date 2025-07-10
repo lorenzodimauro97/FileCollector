@@ -1,4 +1,5 @@
-﻿@if (!string.IsNullOrEmpty(ContextStatusMessage))
+﻿
+@if (!string.IsNullOrEmpty(ContextStatusMessage))
 {
     <div class="alert @(ContextStatusIsError ? "alert-danger" : "alert-success") small py-1 px-2 mb-2"
          role="alert">
