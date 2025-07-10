@@ -84,10 +84,9 @@
 }
 
 @code {
-    private bool _isCheckingManually = false;
-    private bool _forceShowAfterUserCheck = false; // True if manual check initiated, to show "up to date" or error
+    private bool _forceShowAfterUserCheck; // True if manual check initiated, to show "up to date" or error
     private string _currentAppVersion = "N/A";
-    private bool _showModal = false; // New state variable to control modal visibility directly
+    private bool _showModal; // New state variable to control modal visibility directly
 
     protected override async Task OnInitializedAsync()
     {
@@ -147,7 +146,6 @@
         {
             UpdateStateSvc.ResetState(); // Reset state fully
             _forceShowAfterUserCheck = false;
-            _isCheckingManually = false;
             _showModal = false;
         }
         StateHasChanged();
@@ -159,7 +157,6 @@
         // It will reappear if state changes or if app restarts and checks again.
         _showModal = false;
         _forceShowAfterUserCheck = false; // No longer forcing show for this interaction
-        _isCheckingManually = false;
         StateHasChanged();
     }
     
@@ -167,14 +164,12 @@
     {
         UpdateStateSvc.ResetState(); // Reset state fully
         _forceShowAfterUserCheck = false;
-        _isCheckingManually = false;
         _showModal = false;
         StateHasChanged();
     }
 
     private async Task StartUpdateProcessAsync()
     {
-        _isCheckingManually = false;
         _forceShowAfterUserCheck = false;
         // _showModal will be updated by HandleUpdateStateChangedAsync when state changes to Downloading etc.
         await UpdateSvc.DownloadAndApplyUpdateAsync();
@@ -182,7 +177,6 @@
 
     public async Task CheckForUpdatesManuallyAsync()
     {
-        _isCheckingManually = true;
         _forceShowAfterUserCheck = true; // Ensure modal shows for manual check result
         // _showModal will be updated by HandleUpdateStateChangedAsync
         await UpdateSvc.CheckForUpdatesAsync(initiatedByUser: true);

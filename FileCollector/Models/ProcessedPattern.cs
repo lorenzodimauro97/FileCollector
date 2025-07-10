@@ -54,11 +54,12 @@ internal class ProcessedPattern
         StartsWithDoubleStar = !IsAnchoredToRoot && PatternSegments.Length > 0 && PatternSegments[0] == "**";
     }
 
-    public bool IsMatch(string path, bool pathIsActuallyDirectory, Func<string, bool> isPathSegmentDirectoryHeuristic)
+    public bool IsMatch(string? path, bool pathIsActuallyDirectory, Func<string, bool> isPathSegmentDirectoryHeuristic)
     {
         var pathForMatching = path;
 
 
+        if (path == null) return false;
         var driveColonSlash = path.IndexOf(":/", StringComparison.InvariantCultureIgnoreCase);
         if (driveColonSlash != -1 && path.Length > driveColonSlash + 2)
         {
@@ -68,7 +69,6 @@ internal class ProcessedPattern
         {
             pathForMatching = path[1..];
         }
-
 
         var pathSegments = string.IsNullOrEmpty(pathForMatching) ? [] : pathForMatching.Split('/');
 

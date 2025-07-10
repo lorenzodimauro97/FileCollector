@@ -630,11 +630,11 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task HandleSearchInputAsync(ChangeEventArgs e)
+    private void HandleSearchInputAsync(ChangeEventArgs e)
     {
         _searchTerm = e.Value?.ToString() ?? "";
         _searchDebounceTimer?.Change(_searchDebounceTime, Timeout.InfiniteTimeSpan);
-        _searchDebounceTimer ??= new Timer(async _ => await PerformSearchAsync(), null, _searchDebounceTime, Timeout.InfiniteTimeSpan);
+        _searchDebounceTimer ??= new Timer(async void (_) => await PerformSearchAsync(), null, _searchDebounceTime, Timeout.InfiniteTimeSpan);
     }
     
     private List<FileSystemItem> GetAllFileNodes(IEnumerable<FileSystemItem> items)

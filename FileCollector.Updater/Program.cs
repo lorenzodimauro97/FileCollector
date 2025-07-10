@@ -293,7 +293,7 @@ internal class Program
             }
             // Legacy check, just in case LogFolderName is directly under targetDir (though it shouldn't be with new log path logic)
             if (subDir.Name.Equals(LogFolderName, StringComparison.OrdinalIgnoreCase) && 
-                Path.GetFullPath(subDir.Parent.FullName).Equals(Path.GetFullPath(updaterBaseDirectory), StringComparison.OrdinalIgnoreCase) )
+                Path.GetFullPath(subDir.Parent?.FullName ?? throw new InvalidOperationException()).Equals(Path.GetFullPath(updaterBaseDirectory), StringComparison.OrdinalIgnoreCase) )
             {
                  Log.Information("Skipping log folder by name comparison (legacy safety): {FolderPath}", subDir.FullName);
                  continue;

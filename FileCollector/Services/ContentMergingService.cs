@@ -484,7 +484,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         sb.AppendLine().AppendLine();
     }
 
-    private string GenerateTreeStructureString(IEnumerable<FileSystemItem> displayRootItems,
+    private static string GenerateTreeStructureString(IEnumerable<FileSystemItem> displayRootItems,
         string currentDisplayRootPath)
     {
         var sb = new StringBuilder();

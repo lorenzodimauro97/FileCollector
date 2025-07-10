@@ -10,8 +10,6 @@ namespace FileCollector.Services;
 
 public class GitIgnoreFilterService(ILogger<GitIgnoreFilterService> logger)
 {
-    private readonly ILogger<GitIgnoreFilterService> _logger = logger;
-
     public IEnumerable<FileSystemInfo> FilterInfos(IEnumerable<FileSystemInfo> infos, IEnumerable<string> rawGitIgnorePatterns)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -34,7 +32,7 @@ public class GitIgnoreFilterService(ILogger<GitIgnoreFilterService> logger)
         });
 
         stopwatch.Stop();
-        _logger.LogDebug("Perf: GitIgnoreFilterService.FilterInfos completed in {ElapsedMilliseconds}ms. Input: {InputCount}, Output: {OutputCount}", stopwatch.ElapsedMilliseconds, infoList.Count, includedInfos.Count);
+        logger.LogDebug("Perf: GitIgnoreFilterService.FilterInfos completed in {ElapsedMilliseconds}ms. Input: {InputCount}, Output: {OutputCount}", stopwatch.ElapsedMilliseconds, infoList.Count, includedInfos.Count);
         
         return includedInfos;
     }
@@ -55,7 +53,7 @@ public class GitIgnoreFilterService(ILogger<GitIgnoreFilterService> logger)
             {
                 line = line[1..];
             }
-            else if (line.StartsWith("#"))
+            else if (line.StartsWith('#'))
             {
                 continue;
             }
@@ -67,7 +65,7 @@ public class GitIgnoreFilterService(ILogger<GitIgnoreFilterService> logger)
         return processed;
     }
     
-    private bool IsPathExcluded(string normalizedPath, List<ProcessedPattern> patterns, bool isDirectory)
+    private bool IsPathExcluded(string? normalizedPath, List<ProcessedPattern> patterns, bool isDirectory)
     {
         var pathOutcome = GetMatchOutcomeForSpecificPath(normalizedPath, patterns, isDirectory);
 
@@ -109,13 +107,13 @@ public class GitIgnoreFilterService(ILogger<GitIgnoreFilterService> logger)
         return false;
     }
 
-    private MatchOutcome GetMatchOutcomeForSpecificPath(string path, List<ProcessedPattern> patterns,
+    private static MatchOutcome GetMatchOutcomeForSpecificPath(string? path, List<ProcessedPattern> patterns,
         bool pathIsKnownToBeDirectory)
     {
         var currentOutcome = MatchOutcome.NotMatched;
         foreach (var pPattern in patterns)
         {
-            if (pPattern.IsMatch(path, pathIsKnownToBeDirectory, (s) => true))
+            if (pPattern.IsMatch(path, pathIsKnownToBeDirectory, _ => true))
             {
                 currentOutcome = pPattern.IsNegation ? MatchOutcome.Included : MatchOutcome.Excluded;
             }
@@ -124,7 +122,7 @@ public class GitIgnoreFilterService(ILogger<GitIgnoreFilterService> logger)
         return currentOutcome;
     }
 
-    private static string GetParent(string normalizedPath)
+    private static string? GetParent(string? normalizedPath)
     {
         if (string.IsNullOrEmpty(normalizedPath)) return null;
 
