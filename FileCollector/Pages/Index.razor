@@ -637,17 +637,23 @@
         _searchDebounceTimer ??= new Timer(async void (_) => await PerformSearchAsync(), null, _searchDebounceTime, Timeout.InfiniteTimeSpan);
     }
     
-    private List<FileSystemItem> GetAllFileNodes(IEnumerable<FileSystemItem> items)
+    private List<FileSystemItem> GetAllNodes(IEnumerable<FileSystemItem> items)
     {
-        var allFiles = new List<FileSystemItem>();
+        var allItems = new List<FileSystemItem>();
         var queue = new Queue<FileSystemItem>(items);
         while (queue.Count > 0)
         {
             var item = queue.Dequeue();
-            if (!item.IsDirectory) allFiles.Add(item);
-            else foreach (var child in item.Children) queue.Enqueue(child);
+            allItems.Add(item);
+            if (item.IsDirectory)
+            {
+                foreach (var child in item.Children)
+                {
+                    queue.Enqueue(child);
+                }
+            }
         }
-        return allFiles;
+        return allItems;
     }
 
     private async Task PerformSearchAsync()
@@ -655,13 +661,23 @@
         if (_searchDebounceTimer != null) { await _searchDebounceTimer.DisposeAsync(); _searchDebounceTimer = null; }
         _isPerformingSearch = true;
         await InvokeAsync(StateHasChanged);
-        if (string.IsNullOrWhiteSpace(_searchTerm) || _searchTerm.Length < 1) _searchResults.Clear();
+        if (string.IsNullOrWhiteSpace(_searchTerm) || _searchTerm.Length < 1)
+        {
+            _searchResults.Clear();
+        }
         else if (_trueRootItems.Any() && !string.IsNullOrEmpty(_currentDisplayRootPath))
         {
-            var allFileNodes = GetAllFileNodes(_trueRootItems);
-            _searchResults = allFileNodes.Where(node => node.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)).OrderBy(node => node.FullPath).ToList();
+            var allNodes = GetAllNodes(_trueRootItems);
+            _searchResults = allNodes
+                .Where(node => node.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(node => !node.IsDirectory) // Directories first
+                .ThenBy(node => node.FullPath)
+                .ToList();
         }
-        else _searchResults.Clear();
+        else
+        {
+            _searchResults.Clear();
+        }
         _isPerformingSearch = false;
         await InvokeAsync(StateHasChanged);
     }
