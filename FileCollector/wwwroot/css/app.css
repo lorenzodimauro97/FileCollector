@@ -371,7 +371,6 @@ app {
     display: flex;
     flex-grow: 1;
     overflow: hidden;
-    gap: var(--mantine-spacing-lg);
     padding: var(--mantine-spacing-lg);
     background-color: var(--app-bg-color);
 }
@@ -384,12 +383,39 @@ app {
 }
 
 .left-panel {
-    flex: 0 0 320px;
-    min-width: 45vh;
+    flex-shrink: 0;
+    flex-basis: 400px;
+    min-width: 280px;
+    max-width: 75vw;
 }
 
 .right-panel {
     flex: 1 1 auto;
+}
+
+.resizer {
+    flex: 0 0 1rem;
+    position: relative;
+    cursor: col-resize;
+    z-index: 5;
+}
+
+.resizer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 5px;
+    background-color: var(--border-color);
+    transition: background-color 0.15s ease;
+    border-radius: 2px;
+}
+
+.resizer:hover::before,
+.resizer.is-resizing::before {
+    background-color: var(--app-primary-color);
 }
 
 .panel-section {

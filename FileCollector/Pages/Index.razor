@@ -11,7 +11,7 @@
 <PageTitle>File Collector</PageTitle>
 
 <div class="page-layout">
-    <div class="left-panel">
+    <div class="left-panel" id="left-panel-resizable">
         <div class="panel-section">
             <button class="btn btn-primary btn-full-width" @onclick="SelectFolderAndLoadTreeAsync"
                     disabled="@_isLoading">
@@ -112,6 +112,8 @@
             </div>
         }
     </div>
+
+    <div class="resizer" id="resizer-drag-handle"></div>
 
     <div class="right-panel">
         <div class="content-actions-area">
@@ -706,6 +708,14 @@
         if (_searchDebounceTimer != null) { await _searchDebounceTimer.DisposeAsync(); _searchDebounceTimer = null; }
         _isPerformingSearch = false;
         await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JsRuntime.InvokeVoidAsync("blazorInterop.initializeResizer", "resizer-drag-handle", "left-panel-resizable");
+        }
     }
 
     public async ValueTask DisposeAsync()
