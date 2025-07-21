@@ -13,11 +13,17 @@
 <div class="page-layout">
     <div class="left-panel" id="left-panel-resizable">
         <div class="panel-section">
-            <button class="btn btn-primary btn-full-width" @onclick="SelectFolderAndLoadTreeAsync"
-                    disabled="@_isLoading">
-                <TablerIcon OutlineIcon="@TablerIconOutlineName.FolderOpen" Class="me-1" Size="18px"/>
-                Select Root Folder
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary flex-grow-1" @onclick="SelectFolderAndLoadTreeAsync"
+                        disabled="@_isLoading">
+                    <TablerIcon OutlineIcon="@TablerIconOutlineName.FolderOpen" Class="me-1" Size="18px"/>
+                    Select Root...
+                </button>
+                <button class="btn btn-light" @onclick="RefreshFileTreeAsync"
+                        disabled="@(_isLoading || string.IsNullOrEmpty(_currentDisplayRootPath))" title="Refresh file tree">
+                    <TablerIcon OutlineIcon="@TablerIconOutlineName.Refresh"/>
+                </button>
+            </div>
             @if (!string.IsNullOrEmpty(_currentDisplayRootPath))
             {
                 <p class="mt-2 mb-0 text-muted small">Current: <strong
@@ -241,7 +247,7 @@
             return;
         }
 
-        string[]? folderPathArray = await photinoWindow.ShowOpenFolderAsync("Select Root Folder");
+        string[]? folderPathArray = await photinoWindow.ShowOpenFolderAsync("Select Root Folder", _currentDisplayRootPath);
         _isLoading = false;
         _loadingMessage = "";
 
@@ -260,7 +266,7 @@
             }
             else
             {
-                await LoadFileTreeAsync(selectedPath);
+                await RefreshFileTreeAsync();
             }
         }
         else
@@ -275,6 +281,22 @@
             }
             await InvokeAsync(StateHasChanged);
         }
+    }
+    
+    private async Task RefreshFileTreeAsync()
+    {
+        if (string.IsNullOrEmpty(_currentDisplayRootPath)) return;
+
+        var selectionsToRestore = new List<string>(_selectedFilePaths);
+
+        await LoadFileTreeAsync(_currentDisplayRootPath);
+
+        if ((_trueRootItems.Any() || DisplayRootItems.Any()) && selectionsToRestore.Any())
+        {
+            await RestoreFileSelectionsAsync(selectionsToRestore);
+        }
+
+        await GenerateMergedContentAsync();
     }
 
     private async Task LoadFileTreeAsync(string? rootPath)
@@ -378,7 +400,7 @@
     {
         _contextStatusMessage = "";
         await GenerateMergedContentAsync();
-        StateHasChanged(); 
+        StateHasChanged();
     }
 
     private async Task ClearUserPromptAndRefresh()
@@ -391,7 +413,7 @@
         }
         await GenerateMergedContentAsync();
     }
-    
+
     private async Task HandleAutoRefreshEnabledChangedAsync(bool newValue)
     {
         _isAutoRefreshEnabled = newValue;
@@ -443,7 +465,7 @@
         await InvokeAsync(StateHasChanged);
         await GenerateMergedContentAsync();
     }
-    
+
     private async Task HandleRemoveFileAsync(string filePath)
     {
         _contextStatusMessage = "";
@@ -481,10 +503,10 @@
         await InvokeAsync(StateHasChanged);
         _appSettings ??= await SettingsService.GetAppSettingsAsync();
         var filesToMerge = _selectedFilePaths.Select(GetNodeByPath).Where(node => node is { IsDirectory: false }).OfType<FileSystemItem>().OrderBy(node => node.FullPath).ToList();
-        
-        if (!filesToMerge.Any() && 
-            string.IsNullOrWhiteSpace(_appSettings.PrePrompt) && 
-            string.IsNullOrWhiteSpace(_userPromptValue) && 
+
+        if (!filesToMerge.Any() &&
+            string.IsNullOrWhiteSpace(_appSettings.PrePrompt) &&
+            string.IsNullOrWhiteSpace(_userPromptValue) &&
             string.IsNullOrWhiteSpace(_appSettings.PostPrompt) &&
             !_includeFileTreeInOutput &&
             !_privatizeDataInOutput) // Check _privatizeDataInOutput as well, though it usually implies files
@@ -496,14 +518,14 @@
             return;
         }
         var result = await ContentMergerSvc.GenerateMergedContentAsync(
-            filesToMerge, 
-            _appSettings, 
-            _userPromptValue, 
+            filesToMerge,
+            _appSettings,
+            _userPromptValue,
             _currentDisplayRootPath,
             _includeFileTreeInOutput,
             _privatizeDataInOutput, // Pass the new flag
-            DisplayRootItems); 
-            
+            DisplayRootItems);
+
         _mergedFilesToDisplay = result.MergedFilesToDisplay;
         _mergedFileContentPlainText = result.MergedFileContentPlainText;
         _mergedContentTokenCount = result.EstimatedTokenCount;
@@ -556,7 +578,7 @@
         }
         _contextStatusIsError = false;
         await SettingsService.SaveAppSettingsAsync(_appSettings);
-        if (_contextManagementPanelRef != null) _contextManagementPanelRef.NewContextName = ""; 
+        if (_contextManagementPanelRef != null) _contextManagementPanelRef.NewContextName = "";
         await InvokeAsync(StateHasChanged);
     }
 
@@ -638,7 +660,7 @@
         _searchDebounceTimer?.Change(_searchDebounceTime, Timeout.InfiniteTimeSpan);
         _searchDebounceTimer ??= new Timer(async void (_) => await PerformSearchAsync(), null, _searchDebounceTime, Timeout.InfiniteTimeSpan);
     }
-    
+
     private List<FileSystemItem> GetAllNodes(IEnumerable<FileSystemItem> items)
     {
         var allItems = new List<FileSystemItem>();
@@ -683,7 +705,7 @@
         _isPerformingSearch = false;
         await InvokeAsync(StateHasChanged);
     }
-    
+
     private async Task HandleSearchResultSelectionAsync(Tuple<FileSystemItem, bool> args)
     {
         await HandleSearchResultSelectionChangedAsync(args.Item1, args.Item2);
@@ -696,9 +718,9 @@
         {
             originalNode.SetSelectionStatus(isSelected, _selectedFilePaths);
             originalNode.UpdateParentSelectionStatus(_selectedFilePaths);
-            await HandleSelectionChangedAsync(originalNode); 
+            await HandleSelectionChangedAsync(originalNode);
         }
-        else { await InvokeAsync(StateHasChanged); } 
+        else { await InvokeAsync(StateHasChanged); }
     }
 
     private async Task ClearSearchAsync()
