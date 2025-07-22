@@ -54,12 +54,30 @@
 
 <div class="d-flex flex-wrap gap-3 mb-3">
     <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="includePrePromptCheckbox"
+               checked="@IncludePrePrompt"
+               @onchange="HandleIncludePrePromptChanged"
+               disabled="@(IsMergingContent || string.IsNullOrWhiteSpace(AppSettings?.PrePrompt))">
+        <label class="form-check-label small" for="includePrePromptCheckbox">
+            Include Pre-Prompt
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="includePostPromptCheckbox"
+               checked="@IncludePostPrompt"
+               @onchange="HandleIncludePostPromptChanged"
+               disabled="@(IsMergingContent || string.IsNullOrWhiteSpace(AppSettings?.PostPrompt))">
+        <label class="form-check-label small" for="includePostPromptCheckbox">
+            Include Post-Prompt
+        </label>
+    </div>
+    <div class="form-check">
         <input class="form-check-input" type="checkbox" id="includeFileTreeCheckbox"
                checked="@IncludeFileTreeInOutput"
                @onchange="HandleIncludeFileTreeChanged"
                disabled="@(IsMergingContent || string.IsNullOrEmpty(CurrentDisplayRootPath))">
         <label class="form-check-label small" for="includeFileTreeCheckbox">
-            Include full file/folder tree in output
+            Include file/folder tree
         </label>
     </div>
     <div class="form-check">
@@ -68,7 +86,7 @@
                @onchange="HandlePrivatizeDataChanged"
                disabled="@IsMergingContent">
         <label class="form-check-label small" for="privatizeDataCheckboxOutput">
-            Privatize Data (redact values in config files)
+            Privatize Data
         </label>
     </div>
     <div class="form-check form-switch">
@@ -93,6 +111,9 @@
     [Parameter] public EventCallback<string> UserPromptValueChanged { get; set; }
     [Parameter] public bool IncludeFileTreeInOutput { get; set; }
     [Parameter] public bool PrivatizeDataInOutput { get; set; }
+    [Parameter] public bool IncludePrePrompt { get; set; }
+    [Parameter] public bool IncludePostPrompt { get; set; }
+    [Parameter] public AppSettings? AppSettings { get; set; }
     [Parameter] public string? CurrentDisplayRootPath { get; set; }
     [Parameter] public bool IsAutoRefreshEnabled { get; set; }
 
@@ -101,6 +122,8 @@
     [Parameter] public EventCallback OnClearUserPromptClicked { get; set; }
     [Parameter] public EventCallback<bool> OnIncludeFileTreeInOutputChanged { get; set; }
     [Parameter] public EventCallback<bool> OnPrivatizeDataInOutputChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnIncludePrePromptChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnIncludePostPromptChanged { get; set; }
     [Parameter] public EventCallback<bool> OnAutoRefreshEnabledChanged { get; set; }
 
     private string BoundUserPromptValue
@@ -128,6 +151,22 @@
         if (e.Value is bool val)
         {
             await OnPrivatizeDataInOutputChanged.InvokeAsync(val);
+        }
+    }
+    
+    private async Task HandleIncludePrePromptChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool val)
+        {
+            await OnIncludePrePromptChanged.InvokeAsync(val);
+        }
+    }
+    
+    private async Task HandleIncludePostPromptChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool val)
+        {
+            await OnIncludePostPromptChanged.InvokeAsync(val);
         }
     }
 

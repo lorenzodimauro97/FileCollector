@@ -125,11 +125,14 @@
         <div class="content-actions-area">
             <MergedContentControls IsMergingContent="_isMergingContent"
                                    MergedContentTokenCount="_mergedContentTokenCount"
-                                   CanGenerateOrCopy="@(!string.IsNullOrEmpty(_mergedFileContentPlainText) || _includeFileTreeInOutput || _privatizeDataInOutput)"
+                                   CanGenerateOrCopy="@CanGenerateOrCopy()"
                                    MergeErrorMessage="@_mergeErrorMessage"
                                    @bind-UserPromptValue="UserPrompt"
                                    IncludeFileTreeInOutput="_includeFileTreeInOutput"
                                    PrivatizeDataInOutput="_privatizeDataInOutput"
+                                   IncludePrePrompt="_includePrePrompt"
+                                   IncludePostPrompt="_includePostPrompt"
+                                   AppSettings="_appSettings"
                                    CurrentDisplayRootPath="@_currentDisplayRootPath"
                                    IsAutoRefreshEnabled="_isAutoRefreshEnabled"
                                    OnGenerateMergedContentClicked="GenerateMergedContentAsync"
@@ -137,6 +140,8 @@
                                    OnClearUserPromptClicked="ClearUserPromptAndRefresh"
                                    OnIncludeFileTreeInOutputChanged="HandleIncludeFileTreeInOutputChangedAsync"
                                    OnPrivatizeDataInOutputChanged="HandlePrivatizeDataInOutputChangedAsync"
+                                   OnIncludePrePromptChanged="HandleIncludePrePromptChangedAsync"
+                                   OnIncludePostPromptChanged="HandleIncludePostPromptChangedAsync"
                                    OnAutoRefreshEnabledChanged="HandleAutoRefreshEnabledChangedAsync"/>
         </div>
 
@@ -169,6 +174,8 @@
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(500);
     private bool _includeFileTreeInOutput;
     private bool _privatizeDataInOutput;
+    private bool _includePrePrompt = true;
+    private bool _includePostPrompt = true;
     private bool _isAutoRefreshEnabled = true;
 
     private AppSettings? _appSettings;
@@ -203,6 +210,31 @@
                 _userPromptDebounceTimer ??= new Timer(DebouncedUserPromptAction, null, _debounceTime, Timeout.InfiniteTimeSpan);
             }
         }
+    }
+
+    private bool CanGenerateOrCopy()
+    {
+        if (_isMergingContent) return false;
+
+        bool hasContentToGenerate =
+            _selectedFilePaths.Any(p => GetNodeByPath(p) is { IsDirectory: false }) ||
+            _includeFileTreeInOutput ||
+            (_includePrePrompt && !string.IsNullOrWhiteSpace(_appSettings?.PrePrompt)) ||
+            (_includePostPrompt && !string.IsNullOrWhiteSpace(_appSettings?.PostPrompt)) ||
+            !string.IsNullOrWhiteSpace(UserPrompt);
+
+        // Copy is only possible if there is already generated text.
+        // Refresh is possible if there is content to generate.
+        // We can simplify this for the UI component by having one flag.
+        // If there's content to generate, Refresh should be possible. If there's *also* text, Copy is possible.
+        // The child component already disables copy based on an empty string (`_mergedFileContentPlainText`).
+        // Let's pass a flag for `CanRefresh` and let it handle its own `CanCopy` state.
+        // For now, let's make `CanGenerateOrCopy` reflect `CanRefresh` state.
+        // The check in MergedContentControls for `!string.IsNullOrEmpty(_mergedFileContentPlainText)` is no longer there.
+        // Let's re-add it inside the component.
+
+        // The parameter on the component is `CanGenerateOrCopy`. Let's make it represent if there's anything to do.
+        return hasContentToGenerate || !string.IsNullOrEmpty(_mergedFileContentPlainText);
     }
 
     protected override async Task OnInitializedAsync()
@@ -282,7 +314,7 @@
             await InvokeAsync(StateHasChanged);
         }
     }
-    
+
     private async Task RefreshFileTreeAsync()
     {
         if (string.IsNullOrEmpty(_currentDisplayRootPath)) return;
@@ -435,6 +467,18 @@
         await GenerateMergedContentAsync();
     }
 
+    private async Task HandleIncludePrePromptChangedAsync(bool newValue)
+    {
+        _includePrePrompt = newValue;
+        await GenerateMergedContentAsync();
+    }
+
+    private async Task HandleIncludePostPromptChangedAsync(bool newValue)
+    {
+        _includePostPrompt = newValue;
+        await GenerateMergedContentAsync();
+    }
+
     private async void DebouncedUserPromptAction(object? state)
     {
         if (!_isAutoRefreshEnabled) return;
@@ -504,27 +548,17 @@
         _appSettings ??= await SettingsService.GetAppSettingsAsync();
         var filesToMerge = _selectedFilePaths.Select(GetNodeByPath).Where(node => node is { IsDirectory: false }).OfType<FileSystemItem>().OrderBy(node => node.FullPath).ToList();
 
-        if (!filesToMerge.Any() &&
-            string.IsNullOrWhiteSpace(_appSettings.PrePrompt) &&
-            string.IsNullOrWhiteSpace(_userPromptValue) &&
-            string.IsNullOrWhiteSpace(_appSettings.PostPrompt) &&
-            !_includeFileTreeInOutput &&
-            !_privatizeDataInOutput) // Check _privatizeDataInOutput as well, though it usually implies files
-        {
-            _mergedFileContentPlainText = "";
-            _mergedContentTokenCount = 0;
-            _isMergingContent = false;
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
         var result = await ContentMergerSvc.GenerateMergedContentAsync(
             filesToMerge,
             _appSettings,
             _userPromptValue,
             _currentDisplayRootPath,
             _includeFileTreeInOutput,
-            _privatizeDataInOutput, // Pass the new flag
-            DisplayRootItems);
+            _privatizeDataInOutput,
+            allDisplayRootItems: DisplayRootItems,
+            includePrePrompt: _includePrePrompt,
+            includePostPrompt: _includePostPrompt
+        );
 
         _mergedFilesToDisplay = result.MergedFilesToDisplay;
         _mergedFileContentPlainText = result.MergedFileContentPlainText;
@@ -731,6 +765,8 @@
         _isPerformingSearch = false;
         await InvokeAsync(StateHasChanged);
     }
+
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

@@ -258,16 +258,19 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         string? currentDisplayRootPath,
         bool includeFileTreeInOutput,
         bool privatizeDataInOutput,
-        IEnumerable<FileSystemItem> allDisplayRootItems)
+        IEnumerable<FileSystemItem> allDisplayRootItems,
+        bool includePrePrompt,
+        bool includePostPrompt)
     {
-        _logger.LogInformation("[GenerateMergedContentAsync] Starting. privatizeDataInOutput: {PrivatizeFlag}",
-            privatizeDataInOutput);
+        _logger.LogInformation(
+            "[GenerateMergedContentAsync] Starting. privatizeData: {PrivatizeFlag}, includePre: {IncludePre}, includePost: {IncludePost}",
+            privatizeDataInOutput, includePrePrompt, includePostPrompt);
         var mergedFilesToDisplay = new List<MergedFileDisplayItem>();
         var sbPlainText = new StringBuilder();
         var plainTextLanguage = new PlainTextLanguageDefinition();
         var overallErrorMessage = "";
 
-        if (!string.IsNullOrWhiteSpace(appSettings.PrePrompt))
+        if (includePrePrompt && !string.IsNullOrWhiteSpace(appSettings.PrePrompt))
         {
             _logger.LogDebug("[GenerateMergedContentAsync] Adding Pre-Prompt.");
             mergedFilesToDisplay.Add(new MergedFileDisplayItem
@@ -415,7 +418,7 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
             AppendSectionToPlainText(sbPlainText, "User Prompt", userPrompt);
         }
 
-        if (!string.IsNullOrWhiteSpace(appSettings.PostPrompt))
+        if (includePostPrompt && !string.IsNullOrWhiteSpace(appSettings.PostPrompt))
         {
             _logger.LogDebug("[GenerateMergedContentAsync] Adding Post-Prompt.");
             mergedFilesToDisplay.Add(new MergedFileDisplayItem
@@ -434,19 +437,6 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
         _logger.LogInformation(
             "[GenerateMergedContentAsync] Finished. Plain text length: {Length}, Estimated tokens: {Tokens}. ErrorMessage: '{ErrorMsg}'",
             finalPlainTextContent.Length, estimatedTokenCount, overallErrorMessage);
-
-
-        if (fileNodesToProcess.Count == 0 && mergedFilesToDisplay.All(mfd => mfd.FilePath != "SYSTEM_FILE_TREE") &&
-            string.IsNullOrWhiteSpace(appSettings.PrePrompt) &&
-            string.IsNullOrWhiteSpace(userPrompt) &&
-            string.IsNullOrWhiteSpace(appSettings.PostPrompt))
-        {
-            return new MergedContentResult
-            {
-                MergedFileContentPlainText = "", EstimatedTokenCount = 0, MergedFilesToDisplay = [],
-                ErrorMessage = overallErrorMessage
-            };
-        }
 
         return new MergedContentResult
         {
