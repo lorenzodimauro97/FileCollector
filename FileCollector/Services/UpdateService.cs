@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -107,14 +108,14 @@ public class UpdateService
             }
 
             var requestUrl =
-                $"https://api.github.com/repos/{appSettings.Update.GitHubRepoOwner}/{appSettings.Update.GitHubRepoName}/releases/latest";
-            var latestRelease = await _httpClient.GetFromJsonAsync<GitHubReleaseInfo>(requestUrl);
+                $"https://api.github.com/repos/{appSettings.Update.GitHubRepoOwner}/{appSettings.Update.GitHubRepoName}/releases";
+            var allReleases = await _httpClient.GetFromJsonAsync<List<GitHubReleaseInfo>>(requestUrl);
 
-            if (latestRelease == null || string.IsNullOrWhiteSpace(latestRelease.TagName))
+            if (allReleases == null || allReleases.Count == 0)
             {
-                _logger.LogInformation("No latest release found or release tag is empty.");
+                _logger.LogInformation("No releases found on GitHub.");
                 _updateStateService.SetState(UpdateProcessState.Idle,
-                    initiatedByUser ? "You are on the latest version." : null);
+                    initiatedByUser ? "You are on the latest version." : null, null);
                 return;
             }
 
@@ -141,46 +142,45 @@ public class UpdateService
                 return;
             }
 
-
-            var latestVersionStringFromTag = latestRelease.TagName.TrimStart('v');
-            if (!LargeVersion.TryParse(latestVersionStringFromTag, out var latestVersion) ||
-                latestVersion == null)
+            var availableUpdates = new List<GitHubReleaseInfo>();
+            foreach (var release in allReleases)
             {
-                _logger.LogWarning("Could not parse latest release version from tag: {TagName} (Raw: {RawTag})",
-                    latestVersionStringFromTag, latestRelease.TagName);
-                _updateStateService.SetError($"Could not parse latest release version: {latestRelease.TagName}");
-                return;
+                if (release.Prerelease || release.Draft) continue;
+
+                var releaseVersionString = release.TagName.TrimStart('v');
+                if (LargeVersion.TryParse(releaseVersionString, out var releaseVersion) && releaseVersion != null)
+                {
+                    if (releaseVersion.CompareTo(currentVersion) > 0)
+                    {
+                        availableUpdates.Add(release);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Could not parse release version from tag: {TagName}", release.TagName);
+                }
             }
 
-            _logger.LogInformation("Current version: {CurrentVersion}, Latest GitHub release version: {LatestVersion}",
-                currentVersion.ToString(), latestVersion.ToString());
 
-            if (latestVersion.CompareTo(currentVersion) > 0)
+            if (availableUpdates.Any())
             {
-                var expectedAssetName = GetPlatformSpecificAssetFileName();
-                var asset = latestRelease.Assets.FirstOrDefault(a =>
-                    a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
-                if (asset == null)
+                var sortedUpdates = availableUpdates.OrderByDescending(r =>
                 {
-                    _logger.LogWarning(
-                        "New version {LatestVersion} available, but platform-specific asset '{ExpectedAssetName}' not found in release assets.",
-                        latestVersion.ToString(), expectedAssetName);
-                    _updateStateService.SetError(
-                        $"Update for your platform ({expectedAssetName}) not found in version {latestVersion.ToString()}.");
-                    return;
-                }
+                    LargeVersion.TryParse(r.TagName.TrimStart('v'), out var v);
+                    return v;
+                }).ToList();
 
-                _logger.LogInformation("New version available: {LatestVersion}. Asset found: {AssetName}",
-                    latestVersion.ToString(), asset.Name);
+                var latestVersion = sortedUpdates.First();
+                _logger.LogInformation("{UpdateCount} new version(s) available. Latest is {LatestVersion}", sortedUpdates.Count, latestVersion.TagName);
                 _updateStateService.SetState(UpdateProcessState.UpdateAvailable,
-                    $"New version {latestVersion} ({asset.Name}) for your platform is available.",
-                    latestRelease);
+                    $"{sortedUpdates.Count} new update(s) available.",
+                    sortedUpdates);
             }
             else
             {
                 _logger.LogInformation("Application is up to date.");
                 _updateStateService.SetState(UpdateProcessState.Idle,
-                    initiatedByUser ? "You are on the latest version." : null);
+                    initiatedByUser ? "You are on the latest version." : null, null);
             }
         }
         catch (HttpRequestException ex)
@@ -197,7 +197,7 @@ public class UpdateService
 
     public async Task DownloadAndApplyUpdateAsync()
     {
-        if (_updateStateService.AvailableUpdateInfo == null)
+        if (_updateStateService.SelectedUpdate == null)
         {
             _updateStateService.SetError("No update information available to download.");
             return;
@@ -205,7 +205,7 @@ public class UpdateService
 
         var appSettings = await SettingsService.GetAppSettingsAsync();
         var expectedAssetName = GetPlatformSpecificAssetFileName();
-        var asset = _updateStateService.AvailableUpdateInfo.Assets.FirstOrDefault(a =>
+        var asset = _updateStateService.SelectedUpdate.Assets.FirstOrDefault(a =>
             a.Name.Equals(expectedAssetName, StringComparison.OrdinalIgnoreCase));
 
         if (asset == null)

@@ -9,17 +9,20 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable)
+                        @switch (UpdateStateSvc.CurrentState)
                         {
-                            <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Class="me-2" /> <span>Update Available</span>
-                        }
-                        else if (UpdateStateSvc.CurrentState == UpdateProcessState.Error)
-                        {
-                            <TablerIcon OutlineIcon="TablerIconOutlineName.AlertTriangle" Class="me-2" /> <span>Update Error</span>
-                        }
-                        else
-                        {
-                            <TablerIcon OutlineIcon="TablerIconOutlineName.InfoCircle" Class="me-2" /> <span>Application Update</span>
+                            case UpdateProcessState.UpdateAvailable:
+                                <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Class="me-2"/>
+                                <span>Updates Available</span>
+                                break;
+                            case UpdateProcessState.Error:
+                                <TablerIcon OutlineIcon="TablerIconOutlineName.AlertTriangle" Class="me-2"/>
+                                <span>Update Error</span>
+                                break;
+                            default:
+                                <TablerIcon OutlineIcon="TablerIconOutlineName.InfoCircle" Class="me-2"/>
+                                <span>Application Update</span>
+                                break;
                         }
                     </h5>
                     @if (CanCloseModal())
@@ -33,21 +36,31 @@
                         <p>@UpdateStateSvc.StatusMessage</p>
                     }
 
-                    @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable && UpdateStateSvc.AvailableUpdateInfo != null)
+                    @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable && UpdateStateSvc.AvailableUpdates.Any())
                     {
-                        <p class="mt-1 mb-2"><small>You are currently on version: @(_currentAppVersion)</small></p>
-                        
-                        <h6>Release Details:</h6>
-                        <ul class="list-unstyled small ms-2 mb-2">
-                            <li><strong>Name:</strong> @UpdateStateSvc.AvailableUpdateInfo.Name</li>
-                            <li><strong>Published:</strong> @UpdateStateSvc.AvailableUpdateInfo.PublishedAt.ToString("g")</li>
-                        </ul>
+                        <p class="mt-1 mb-2">
+                            <small>You are currently on version: @(_currentAppVersion)</small>
+                        </p>
 
-                        @if (!string.IsNullOrWhiteSpace(UpdateStateSvc.AvailableUpdateInfo.Body))
+                        <div class="mb-3">
+                            <label for="version-select" class="form-label fw-bold">Select version to install:</label>
+                            <select id="version-select" class="form-select" @onchange="OnVersionSelected">
+                                @foreach (var release in UpdateStateSvc.AvailableUpdates.OrderByDescending(r => r.PublishedAt))
+                                {
+                                    <option value="@release.TagName" selected="@(UpdateStateSvc.SelectedUpdate?.TagName == release.TagName)">
+                                        @release.Name (@release.TagName)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        if (UpdateStateSvc.SelectedUpdate != null)
                         {
-                            <h6>Release Notes:</h6>
-                            <div class="release-notes scrollable-area-sm" style="max-height: 150px; background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">
-                                <pre style="white-space: pre-wrap; font-size: 0.8em;">@UpdateStateSvc.AvailableUpdateInfo.Body</pre>
+                            <h6 class="mt-3">Changes up to version @UpdateStateSvc.SelectedUpdate.TagName.TrimStart('v'):</h6>
+                            <div class="release-notes scrollable-area-sm">
+                                <MarkdownRenderer MarkdownContent="@GetCombinedReleaseNotes()" 
+                                                  UseHardLineBreaks="true"
+                                                  CustomTheme="@_lightThemeForMarkdown" />
                             </div>
                         }
                     }
@@ -58,24 +71,31 @@
 
                     @if (UpdateStateSvc.CurrentState is UpdateProcessState.Downloading or UpdateProcessState.Extracting)
                     {
-                            <ProgressBar Value="@((int)UpdateStateSvc.Progress)" Max="100" ShowValue="true" Color="green"></ProgressBar>
+                        <ProgressBar Value="@((int)UpdateStateSvc.Progress)" Max="100" ShowValue="true" Color="green"></ProgressBar>
                     }
                 </div>
                 <div class="modal-footer">
-                    @if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable)
+                    @switch (UpdateStateSvc.CurrentState)
                     {
-                        <button type="button" class="btn btn-light" @onclick="HandleLaterClicked">Later</button>
-                        <button type="button" class="btn btn-primary" @onclick="StartUpdateProcessAsync">
-                            <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Class="me-1" /> Update and Restart
-                        </button>
-                    }
-                    else if (UpdateStateSvc.CurrentState == UpdateProcessState.ReadyToApply && UpdateStateSvc.StatusMessage != null && UpdateStateSvc.StatusMessage.Contains("Updater launched"))
-                    {
-                         <button type="button" class="btn btn-primary" disabled>Closing...</button>
-                    }
-                    else if (CanCloseModal()) // For Error, Idle (after manual check), etc.
-                    {
-                        <button type="button" class="btn btn-primary" @onclick="HandleOkClicked">OK</button>
+                        case UpdateProcessState.UpdateAvailable:
+                            <button type="button" class="btn btn-light" @onclick="HandleLaterClicked">Later</button>
+                            <button type="button" class="btn btn-primary" @onclick="StartUpdateProcessAsync" disabled="@(UpdateStateSvc.SelectedUpdate == null)">
+                                <TablerIcon OutlineIcon="TablerIconOutlineName.Download" Class="me-1"/>
+                                Update to @UpdateStateSvc.SelectedUpdate?.TagName.TrimStart('v')
+                            </button>
+                            break;
+                        case UpdateProcessState.ReadyToApply when UpdateStateSvc.StatusMessage != null && UpdateStateSvc.StatusMessage.Contains("Updater launched"):
+                            <button type="button" class="btn btn-primary" disabled>Closing...</button>
+                            break;
+                        default:
+                        {
+                            if (CanCloseModal())
+                            {
+                                <button type="button" class="btn btn-primary" @onclick="HandleOkClicked">OK</button>
+                            }
+
+                            break;
+                        }
                     }
                 </div>
             </div>
@@ -84,15 +104,27 @@
 }
 
 @code {
-    private bool _forceShowAfterUserCheck; // True if manual check initiated, to show "up to date" or error
+    private bool _forceShowAfterUserCheck; 
     private string _currentAppVersion = "N/A";
-    private bool _showModal; // New state variable to control modal visibility directly
+    private bool _showModal;
+
+    private readonly Dictionary<string, string> _lightThemeForMarkdown = new()
+    {
+        { "text", "#24292e" },
+        { "heading", "#24292e" },
+        { "link", "#0366d6" },
+        { "border", "#e1e4e8" },
+        { "code-background", "#f6f8fa" },
+        { "blockquote-text", "#6a737d" },
+        { "blockquote-border", "#dfe2e5" },
+        { "inline-code-background", "rgba(27,31,35,.05)" }
+    };
 
     protected override async Task OnInitializedAsync()
     {
         UpdateStateSvc.OnUpdateStateChangedAsync += HandleUpdateStateChangedAsync;
         _currentAppVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "N/A";
-        UpdateModalVisibility(); // Initial check
+        UpdateModalVisibility(); 
 
         var appSettings = await UpdateSvc.SettingsService.GetAppSettingsAsync();
         if (appSettings.Update.CheckForUpdatesOnStartup)
@@ -109,14 +141,12 @@
 
     private void UpdateModalVisibility()
     {
-        // Determine if the modal should be shown
         if (UpdateStateSvc.CurrentState == UpdateProcessState.Idle)
         {
-            _showModal = _forceShowAfterUserCheck; // Show if manual check just finished (e.g. "up to date")
+            _showModal = _forceShowAfterUserCheck;
         }
         else
         {
-            // Show for any other non-idle state (UpdateAvailable, Downloading, Error, etc.)
             _showModal = true;
         }
     }
@@ -131,38 +161,34 @@
             _ => true,
         };
     }
-    
-    private void HandleDismissClicked() // For the 'X' button
+
+    private void HandleDismissClicked()
     {
         if (!CanCloseModal()) return;
 
         if (UpdateStateSvc.CurrentState == UpdateProcessState.UpdateAvailable)
         {
-            // If user dismisses "UpdateAvailable" with X, treat it like "Later"
-            // The state remains UpdateAvailable, but modal hides. It will reappear if state changes.
             _showModal = false;
         }
-        else // For Error, Idle (after manual check)
+        else
         {
-            UpdateStateSvc.ResetState(); // Reset state fully
+            UpdateStateSvc.ResetState();
             _forceShowAfterUserCheck = false;
             _showModal = false;
         }
         StateHasChanged();
     }
 
-    private void HandleLaterClicked() // For "Later" button on UpdateAvailable
+    private void HandleLaterClicked()
     {
-        // State remains UpdateAvailable, but modal hides.
-        // It will reappear if state changes or if app restarts and checks again.
         _showModal = false;
-        _forceShowAfterUserCheck = false; // No longer forcing show for this interaction
+        _forceShowAfterUserCheck = false;
         StateHasChanged();
     }
-    
-    private void HandleOkClicked() // For "OK" button on Error, Idle (after manual check)
+
+    private void HandleOkClicked()
     {
-        UpdateStateSvc.ResetState(); // Reset state fully
+        UpdateStateSvc.ResetState();
         _forceShowAfterUserCheck = false;
         _showModal = false;
         StateHasChanged();
@@ -171,14 +197,71 @@
     private async Task StartUpdateProcessAsync()
     {
         _forceShowAfterUserCheck = false;
-        // _showModal will be updated by HandleUpdateStateChangedAsync when state changes to Downloading etc.
         await UpdateSvc.DownloadAndApplyUpdateAsync();
     }
 
+    private void OnVersionSelected(ChangeEventArgs e)
+    {
+        var selectedTag = e.Value?.ToString();
+        if (string.IsNullOrEmpty(selectedTag)) return;
+
+        var selectedRelease = UpdateStateSvc.AvailableUpdates.FirstOrDefault(r => r.TagName == selectedTag);
+        if (UpdateStateSvc.SelectedUpdate == selectedRelease) return;
+        UpdateStateSvc.SelectedUpdate = selectedRelease;
+        StateHasChanged();
+    }
+
+    private string GetCombinedReleaseNotes()
+    {
+        if (UpdateStateSvc.SelectedUpdate == null) return "Select a version to see release notes.";
+
+        if (!LargeVersion.TryParse(_currentAppVersion, out var currentVersion))
+        {
+            currentVersion = new LargeVersion(0);
+        }
+
+        if (!LargeVersion.TryParse(UpdateStateSvc.SelectedUpdate.TagName.TrimStart('v'), out var selectedVersion))
+        {
+            return $"Could not parse selected version tag: {UpdateStateSvc.SelectedUpdate.TagName}";
+        }
+
+        var updatesToInclude = UpdateStateSvc.AvailableUpdates
+            .Select(r => new
+            {
+                Release = r,
+                Version = LargeVersion.TryParse(r.TagName.TrimStart('v'), out var v) ? v : null
+            })
+            .Where(item =>
+                item.Version != null &&
+                item.Version.CompareTo(currentVersion) > 0 &&
+                item.Version.CompareTo(selectedVersion) <= 0
+            )
+            .OrderByDescending(item => item.Version)
+            .Select(item => item.Release)
+            .ToList();
+        
+        if (!updatesToInclude.Any())
+        {
+            return !string.IsNullOrWhiteSpace(UpdateStateSvc.SelectedUpdate.Body) 
+                ? UpdateStateSvc.SelectedUpdate.Body 
+                : "No release notes provided for this version.";
+        }
+
+        var sb = new StringBuilder();
+        foreach (var release in updatesToInclude)
+        {
+            sb.AppendLine($"# {release.Name} ({release.TagName})");
+            sb.AppendLine(!string.IsNullOrWhiteSpace(release.Body) ? release.Body.Trim() : "No release notes provided for this version.");
+            sb.AppendLine();
+        }
+
+        return sb.ToString().Trim();
+    }
+
+
     public async Task CheckForUpdatesManuallyAsync()
     {
-        _forceShowAfterUserCheck = true; // Ensure modal shows for manual check result
-        // _showModal will be updated by HandleUpdateStateChangedAsync
+        _forceShowAfterUserCheck = true;
         await UpdateSvc.CheckForUpdatesAsync(initiatedByUser: true);
     }
 

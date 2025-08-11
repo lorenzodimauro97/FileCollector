@@ -1,5 +1,6 @@
-﻿
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FileCollector.Models;
 
@@ -20,17 +21,28 @@ public enum UpdateProcessState
 public class UpdateStateService
 {
     public UpdateProcessState CurrentState { get; private set; } = UpdateProcessState.Idle;
-    public GitHubReleaseInfo? AvailableUpdateInfo { get; private set; }
+    public List<GitHubReleaseInfo> AvailableUpdates { get; private set; } = [];
+    public GitHubReleaseInfo? SelectedUpdate { get; set; }
     public string? StatusMessage { get; private set; }
     public double Progress { get; private set; }
 
     public event Func<Task>? OnUpdateStateChangedAsync;
 
-    public void SetState(UpdateProcessState newState, string? message = null, GitHubReleaseInfo? releaseInfo = null)
+    public void SetState(UpdateProcessState newState, string? message = null, List<GitHubReleaseInfo>? releases = null)
     {
         CurrentState = newState;
         StatusMessage = message;
-        AvailableUpdateInfo = releaseInfo ?? AvailableUpdateInfo;
+        AvailableUpdates = releases ?? [];
+
+        if (AvailableUpdates.Any())
+        {
+            SelectedUpdate = AvailableUpdates.OrderByDescending(r => r.PublishedAt).FirstOrDefault();
+        }
+        else
+        {
+            SelectedUpdate = null;
+        }
+        
         Progress = 0;
         NotifyStateChanged();
     }
@@ -64,7 +76,8 @@ public class UpdateStateService
     {
         CurrentState = UpdateProcessState.Idle;
         StatusMessage = null;
-        AvailableUpdateInfo = null;
+        AvailableUpdates.Clear();
+        SelectedUpdate = null;
         Progress = 0;
         NotifyStateChanged();
     }

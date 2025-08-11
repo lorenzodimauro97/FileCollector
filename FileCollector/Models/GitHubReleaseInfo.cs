@@ -26,6 +26,12 @@ public class GitHubReleaseInfo
 
     [JsonPropertyName("assets")]
     public List<GitHubAsset> Assets { get; set; } = [];
+    
+    [JsonPropertyName("prerelease")]
+    public bool Prerelease { get; set; }
+
+    [JsonPropertyName("draft")]
+    public bool Draft { get; set; }
 }
 
 public class GitHubAsset

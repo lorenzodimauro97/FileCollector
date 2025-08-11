@@ -27,6 +27,9 @@
 		<Content Update="Shared\ProgressBar.razor.css">
 		  <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 		</Content>
+		<Content Update="Shared\UpdateModal.razor.css">
+		  <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -40,9 +43,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="BlazorTablerIcons" Version="1.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
 		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
-		<PackageReference Include="S97SP.Prism.Blazor" Version="1.0.3" />
+		<PackageReference Include="S97SP.Prism.Blazor" Version="1.1.1" />
 		<PackageReference Include="Serilog" Version="4.3.0" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
@@ -74,7 +77,7 @@
 		<MakeDir Directories="$(_PathToCopyFrom)" />
 
 		<Message Text="Publishing FileCollector.Updater using dotnet publish to: $(_PathToCopyFrom) for final publish step" Importance="high" />
-		<Exec Command='dotnet publish "$(_UpdaterProjectFullPath)" -c $(Configuration) -f $(TargetFramework) -r $(RuntimeIdentifier) -o "$(_PathToCopyFrom)" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=True -p:TrimMode=Link /p:DebugType=None /p:Version=$(Version) /p:InformationalVersion=$(InformationalVersion) /p:AssemblyVersion=$(AssemblyVersion) /p:FileVersion=$(FileVersion)' />
+		<Exec Command="dotnet publish &quot;$(_UpdaterProjectFullPath)&quot; -c $(Configuration) -f $(TargetFramework) -r $(RuntimeIdentifier) -o &quot;$(_PathToCopyFrom)&quot; --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=True -p:TrimMode=Link /p:DebugType=None /p:Version=$(Version) /p:InformationalVersion=$(InformationalVersion) /p:AssemblyVersion=$(AssemblyVersion) /p:FileVersion=$(FileVersion)" />
 
 		<!-- Diagnostic: List files in the intermediate directory -->
 		<Message Text="Listing files in intermediate updater publish directory (AfterTargets=Publish): $(_PathToCopyFrom)" Importance="high" />
@@ -89,22 +92,15 @@
 			<_UpdaterFilesToCopy Include="@(_IntermediateUpdaterFiles)" />
 		</ItemGroup>
 
-		<Message Text="Number of updater files to copy (AfterTargets=Publish): @(_UpdaterFilesToCopy->Count())" Importance="high" />
+		<Message Text="Number of updater files to copy (AfterTargets=Publish): @(_UpdaterFilesToCopy-&gt;Count())" Importance="high" />
 
 		<!-- This copy to $(OutputPath) might be redundant if AfterTargets=Publish, but harmless.
 		     The main goal is to ensure $(PublishDir) is correct. -->
-		<Message Text="Copying FileCollector.Updater files to build output (AfterTargets=Publish): $(OutputPath)" Importance="high" Condition="'@(_UpdaterFilesToCopy->Count())' > '0'" />
-		<Copy SourceFiles="@(_UpdaterFilesToCopy)"
-			  DestinationFolder="$(OutputPath)\%(RecursiveDir)"
-			  SkipUnchangedFiles="true"
-			  Condition="'@(_UpdaterFilesToCopy->Count())' > '0'"/>
+		<Message Text="Copying FileCollector.Updater files to build output (AfterTargets=Publish): $(OutputPath)" Importance="high" Condition="'@(_UpdaterFilesToCopy-&gt;Count())' &gt; '0'" />
+		<Copy SourceFiles="@(_UpdaterFilesToCopy)" DestinationFolder="$(OutputPath)\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'@(_UpdaterFilesToCopy-&gt;Count())' &gt; '0'" />
 
-		<Message Text="Copying FileCollector.Updater files to FINAL publish output (AfterTargets=Publish): $(PublishDir)" Importance="high" Condition=" '$(PublishDir)' != '' And '@(_UpdaterFilesToCopy->Count())' > '0'" />
-		<Copy SourceFiles="@(_UpdaterFilesToCopy)"
-			  DestinationFolder="$(PublishDir)\%(RecursiveDir)"
-			  SkipUnchangedFiles="false"
-			  OverwriteReadOnlyFiles="true"
-			  Condition=" '$(PublishDir)' != '' And '@(_UpdaterFilesToCopy->Count())' > '0'" />
+		<Message Text="Copying FileCollector.Updater files to FINAL publish output (AfterTargets=Publish): $(PublishDir)" Importance="high" Condition=" '$(PublishDir)' != '' And '@(_UpdaterFilesToCopy-&gt;Count())' &gt; '0'" />
+		<Copy SourceFiles="@(_UpdaterFilesToCopy)" DestinationFolder="$(PublishDir)\%(RecursiveDir)" SkipUnchangedFiles="false" OverwriteReadOnlyFiles="true" Condition=" '$(PublishDir)' != '' And '@(_UpdaterFilesToCopy-&gt;Count())' &gt; '0'" />
 
 		<RemoveDir Directories="$(_PathToCopyFrom)" Condition="Exists('$(_PathToCopyFrom)')" />
 	</Target>
