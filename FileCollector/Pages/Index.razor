@@ -20,7 +20,8 @@
                     Select Root...
                 </button>
                 <button class="btn btn-light" @onclick="RefreshFileTreeAsync"
-                        disabled="@(_isLoading || string.IsNullOrEmpty(_currentDisplayRootPath))" title="Refresh file tree">
+                        disabled="@(_isLoading || string.IsNullOrEmpty(_currentDisplayRootPath))"
+                        title="Refresh file tree">
                     <TablerIcon OutlineIcon="@TablerIconOutlineName.Refresh"/>
                 </button>
             </div>
@@ -279,7 +280,15 @@
             return;
         }
 
-        string[]? folderPathArray = await photinoWindow.ShowOpenFolderAsync("Select Root Folder", _currentDisplayRootPath);
+        var dialogPath = _currentDisplayRootPath;
+        if (!string.IsNullOrEmpty(dialogPath) && !Directory.Exists(dialogPath))
+        {
+            Logger.LogWarning("Current root path {path} does not exist, resetting.", dialogPath);
+            _currentDisplayRootPath = null;
+            dialogPath = null;
+        }
+
+        string[]? folderPathArray = await photinoWindow.ShowOpenFolderAsync("Select Root Folder", dialogPath);
         _isLoading = false;
         _loadingMessage = "";
 
@@ -311,6 +320,7 @@
                 _trueRootItems.Clear();
                 await ClearSearchAsync();
             }
+
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -362,6 +372,7 @@
         try
         {
             _appSettings ??= await SettingsService.GetAppSettingsAsync();
+
             async Task ReportProgressAction(string newProgressMessage)
             {
                 await InvokeAsync(() =>
@@ -370,6 +381,7 @@
                     StateHasChanged();
                 });
             }
+
             result = await FileTreeSvc.LoadTreeAsync(rootPath, _appSettings.IgnorePatterns, ReportProgressAction);
             if (result.IsError)
             {
@@ -405,6 +417,7 @@
             {
                 _loadingMessage = "";
             }
+
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -425,6 +438,7 @@
                 node.UpdateParentSelectionStatus(_selectedFilePaths);
             }
         }
+
         return Task.CompletedTask;
     }
 
@@ -443,6 +457,7 @@
             await _userPromptDebounceTimer.DisposeAsync();
             _userPromptDebounceTimer = null;
         }
+
         await GenerateMergedContentAsync();
     }
 
@@ -482,8 +497,14 @@
     private async void DebouncedUserPromptAction(object? state)
     {
         if (!_isAutoRefreshEnabled) return;
-        try { await InvokeAsync(GenerateMergedContentAsync); }
-        catch (ObjectDisposedException) { Logger.LogDebug("DebouncedUserPromptAction skipped: component disposed."); }
+        try
+        {
+            await InvokeAsync(GenerateMergedContentAsync);
+        }
+        catch (ObjectDisposedException)
+        {
+            Logger.LogDebug("DebouncedUserPromptAction skipped: component disposed.");
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error in DebouncedUserPromptAction.");
@@ -526,7 +547,9 @@
     {
         node.IsSelected = false;
         node.IsPartiallySelected = false;
-        if (node.IsDirectory) foreach (var child in node.Children) DeselectNodeAndChildrenRecursive(child);
+        if (node.IsDirectory)
+            foreach (var child in node.Children)
+                DeselectNodeAndChildrenRecursive(child);
     }
 
     private FileSystemItem? GetNodeByPath(string fullPath) =>
@@ -571,12 +594,21 @@
     private async Task CopyMergedContentToClipboardAsync()
     {
         if (string.IsNullOrEmpty(_mergedFileContentPlainText)) return;
-        try { await JsRuntime.InvokeVoidAsync("blazorInterop.copyToClipboard", _mergedFileContentPlainText, "copyFeedback"); }
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("blazorInterop.copyToClipboard", _mergedFileContentPlainText, "copyFeedback");
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "JS interop for copyToClipboard failed.");
-            try { await JsRuntime.InvokeVoidAsync("eval", "var el=document.getElementById('copyFeedback');if(el){el.innerText='Copy failed!';el.style.color='red';setTimeout(()=>{if(el)el.innerText='';},3000);}"); }
-            catch (JSException evalEx) { Logger.LogError(evalEx, "Fallback JS for copy feedback failed."); }
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("eval", "var el=document.getElementById('copyFeedback');if(el){el.innerText='Copy failed!';el.style.color='red';setTimeout(()=>{if(el)el.innerText='';},3000);}");
+            }
+            catch (JSException evalEx)
+            {
+                Logger.LogError(evalEx, "Fallback JS for copy feedback failed.");
+            }
         }
     }
 
@@ -589,6 +621,7 @@
             await InvokeAsync(StateHasChanged);
             return;
         }
+
         var actualSelectedFiles = _selectedFilePaths.Select(GetNodeByPath).Where(n => n is { IsDirectory: false }).Select(n => n!.FullPath).ToList();
         if (!actualSelectedFiles.Any())
         {
@@ -597,6 +630,7 @@
             await InvokeAsync(StateHasChanged);
             return;
         }
+
         _appSettings ??= await SettingsService.GetAppSettingsAsync();
         var trimmedName = newContextNameFromChild.Trim();
         var existingContext = _appSettings.SavedContexts.FirstOrDefault(c => c.RootPath == _currentDisplayRootPath && c.Name == trimmedName);
@@ -610,9 +644,10 @@
             _appSettings.SavedContexts.Add(new SavedContext { Name = trimmedName, RootPath = _currentDisplayRootPath, SelectedFilePaths = [..actualSelectedFiles] });
             _contextStatusMessage = $"Context '{trimmedName}' saved.";
         }
+
         _contextStatusIsError = false;
         await SettingsService.SaveAppSettingsAsync(_appSettings);
-        if (_contextManagementPanelRef != null) _contextManagementPanelRef.NewContextName = "";
+        _contextManagementPanelRef.NewContextName = "";
         await InvokeAsync(StateHasChanged);
     }
 
@@ -632,7 +667,8 @@
             _contextStatusMessage = $"Context '{contextNameToLoad}' not found.";
             _contextStatusIsError = true;
         }
-        if (_contextManagementPanelRef != null) _contextManagementPanelRef.SelectedContextToLoadId = null;
+
+        _contextManagementPanelRef.SelectedContextToLoadId = null;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -645,6 +681,7 @@
             await InvokeAsync(StateHasChanged);
             return;
         }
+
         _isLoading = true;
         _loadingMessage = $"Loading context '{contextToApply.Name}'...";
         _contextStatusMessage = "";
@@ -654,10 +691,12 @@
             _currentDisplayRootPath = contextToApply.RootPath;
             await LoadFileTreeAsync(_currentDisplayRootPath);
         }
+
         if ((_trueRootItems.Any() || DisplayRootItems.Any()) && contextToApply.SelectedFilePaths.Any())
         {
             await RestoreFileSelectionsAsync([..contextToApply.SelectedFilePaths]);
         }
+
         await GenerateMergedContentAsync();
         _isLoading = false;
         _loadingMessage = "";
@@ -675,7 +714,7 @@
             await SettingsService.SaveAppSettingsAsync(_appSettings);
             _contextStatusMessage = $"Context '{contextNameToDelete}' deleted.";
             _contextStatusIsError = false;
-            if (_contextManagementPanelRef != null && _contextManagementPanelRef.SelectedContextToLoadId == contextNameToDelete)
+            if (_contextManagementPanelRef.SelectedContextToLoadId == contextNameToDelete)
             {
                 _contextManagementPanelRef.SelectedContextToLoadId = null;
             }
@@ -685,6 +724,7 @@
             _contextStatusMessage = $"Context '{contextNameToDelete}' not found for current path.";
             _contextStatusIsError = true;
         }
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -711,12 +751,18 @@
                 }
             }
         }
+
         return allItems;
     }
 
     private async Task PerformSearchAsync()
     {
-        if (_searchDebounceTimer != null) { await _searchDebounceTimer.DisposeAsync(); _searchDebounceTimer = null; }
+        if (_searchDebounceTimer != null)
+        {
+            await _searchDebounceTimer.DisposeAsync();
+            _searchDebounceTimer = null;
+        }
+
         _isPerformingSearch = true;
         await InvokeAsync(StateHasChanged);
         if (string.IsNullOrWhiteSpace(_searchTerm) || _searchTerm.Length < 1)
@@ -736,6 +782,7 @@
         {
             _searchResults.Clear();
         }
+
         _isPerformingSearch = false;
         await InvokeAsync(StateHasChanged);
     }
@@ -754,18 +801,25 @@
             originalNode.UpdateParentSelectionStatus(_selectedFilePaths);
             await HandleSelectionChangedAsync(originalNode);
         }
-        else { await InvokeAsync(StateHasChanged); }
+        else
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task ClearSearchAsync()
     {
         _searchTerm = "";
         _searchResults.Clear();
-        if (_searchDebounceTimer != null) { await _searchDebounceTimer.DisposeAsync(); _searchDebounceTimer = null; }
+        if (_searchDebounceTimer != null)
+        {
+            await _searchDebounceTimer.DisposeAsync();
+            _searchDebounceTimer = null;
+        }
+
         _isPerformingSearch = false;
         await InvokeAsync(StateHasChanged);
     }
-
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -784,4 +838,5 @@
         await (_searchDebounceTimer?.DisposeAsync() ?? ValueTask.CompletedTask);
         _searchDebounceTimer = null;
     }
+
 }
