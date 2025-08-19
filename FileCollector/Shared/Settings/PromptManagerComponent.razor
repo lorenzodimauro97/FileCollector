@@ -1,0 +1,149 @@
+﻿<div class="prompt-manager-container @Class">
+    <h5>@PromptType Management</h5>
+
+    <div class="row">
+        <div class="col-md-4">
+            <label for="@($"active-{PromptType}")" class="form-label small">Active (Default) Prompt</label>
+            <select id="@($"active-{PromptType}")" class="form-select form-select-sm mb-3"
+                    value="@ActivePromptId"
+                    @onchange="OnActivePromptIdSelectChanged"
+                    disabled="@(IsBusy || !Prompts.Any())">
+                <option value="@(Guid.Empty)">None (Default)</option>
+                @foreach (var prompt in Prompts)
+                {
+                    <option value="@prompt.Id">@prompt.Name</option>
+                }
+            </select>
+
+            <div class="list-group prompt-list scrollable-area-sm" style="max-height: 250px;">
+                @foreach (var prompt in Prompts)
+                {
+                    <button type="button"
+                            class="list-group-item list-group-item-action @(prompt.Id == _selectedPrompt?.Id ? "active" : "")"
+                            @onclick="() => SelectPromptForEditing(prompt)">
+                        @prompt.Name
+                    </button>
+                }
+            </div>
+            <button class="btn btn-light btn-sm mt-2" @onclick="AddNewPrompt" disabled="@IsBusy">
+                <TablerIcon OutlineIcon="TablerIconOutlineName.Plus" Class="me-1" Size="16px"/> Add New Prompt
+            </button>
+        </div>
+        <div class="col-md-8">
+            @if (_selectedPrompt != null)
+            {
+                <div class="prompt-editor">
+                    <div class="mb-3">
+                        <label for="@($"promptName-{PromptType}")" class="form-label small">Prompt Name</label>
+                        <input type="text" id="@($"promptName-{PromptType}")" class="form-control form-control-sm"
+                               @bind="_selectedPrompt.Name" @bind:event="oninput"
+                               placeholder="Enter a unique name" disabled="@IsBusy"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="@($"promptContent-{PromptType}")" class="form-label small">Prompt Content</label>
+                        <textarea id="@($"promptContent-{PromptType}")" class="form-control form-control-sm" rows="8"
+                                  @bind="_selectedPrompt.Content" @bind:event="oninput"
+                                  placeholder="Enter the prompt content here..." disabled="@IsBusy"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-subtle-danger" @onclick="DeleteSelectedPrompt" disabled="@(IsBusy || _isAddNewMode)">
+                            <TablerIcon OutlineIcon="TablerIconOutlineName.Trash" Class="me-1" Size="16px"/> Delete
+                        </button>
+                        <button class="btn btn-primary" @onclick="SaveSelectedPrompt" disabled="@(IsBusy || string.IsNullOrWhiteSpace(_selectedPrompt.Name))">
+                            <TablerIcon OutlineIcon="TablerIconOutlineName.DeviceFloppy" Class="me-1" Size="16px"/> Save Prompt
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="prompt-editor-placeholder">
+                    <p class="text-muted">Select a prompt to edit or add a new one.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string PromptType { get; set; } = "Prompt";
+    [Parameter] public List<Prompt> Prompts { get; set; } = new();
+    [Parameter] public Guid? ActivePromptId { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public EventCallback<Tuple<string, List<Prompt>>> OnPromptsChanged { get; set; }
+    [Parameter] public EventCallback<Tuple<string, Guid?>> OnActivePromptIdChanged { get; set; }
+
+    private Prompt? _selectedPrompt;
+    private bool _isAddNewMode;
+
+    private void SelectPromptForEditing(Prompt prompt)
+    {
+        _selectedPrompt = new Prompt { Id = prompt.Id, Name = prompt.Name, Content = prompt.Content };
+        _isAddNewMode = false;
+    }
+
+    private void AddNewPrompt()
+    {
+        _selectedPrompt = new Prompt { Name = "New " + PromptType, Content = "" };
+        _isAddNewMode = true;
+    }
+
+    private async Task SaveSelectedPrompt()
+    {
+        if (_selectedPrompt == null || string.IsNullOrWhiteSpace(_selectedPrompt.Name)) return;
+
+        var existing = Prompts.FirstOrDefault(p => p.Id == _selectedPrompt.Id);
+        if (existing != null) // Update
+        {
+            existing.Name = _selectedPrompt.Name;
+            existing.Content = _selectedPrompt.Content;
+        }
+        else // Add
+        {
+            Prompts.Add(_selectedPrompt);
+        }
+
+        await OnPromptsChanged.InvokeAsync(Tuple.Create(PromptType, Prompts));
+        
+        // If this was a new prompt, also set it as active
+        if (_isAddNewMode)
+        {
+            await OnActivePromptIdChanged.InvokeAsync(Tuple.Create(PromptType, (Guid?)_selectedPrompt.Id));
+        }
+
+        _selectedPrompt = null;
+        _isAddNewMode = false;
+    }
+
+    private async Task DeleteSelectedPrompt()
+    {
+        if (_selectedPrompt == null || _isAddNewMode) return;
+
+        var promptToRemove = Prompts.FirstOrDefault(p => p.Id == _selectedPrompt.Id);
+        if (promptToRemove != null)
+        {
+            Prompts.Remove(promptToRemove);
+            
+            // If the deleted prompt was the active one, reset the active ID
+            if (ActivePromptId == _selectedPrompt.Id)
+            {
+                await OnActivePromptIdChanged.InvokeAsync(Tuple.Create(PromptType, (Guid?)null));
+            }
+
+            await OnPromptsChanged.InvokeAsync(Tuple.Create(PromptType, Prompts));
+        }
+
+        _selectedPrompt = null;
+    }
+
+    private async Task OnActivePromptIdSelectChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var newId))
+        {
+            var valueToSet = newId == Guid.Empty ? null : (Guid?)newId;
+            await OnActivePromptIdChanged.InvokeAsync(Tuple.Create(PromptType, valueToSet));
+        }
+    }
+}

@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,7 +25,48 @@ public class SettingsService
 
             var json = await File.ReadAllTextAsync(_appSettingsPath);
             var config = JsonSerializer.Deserialize(json, AppJsonSerializerContext.Default.AppConfiguration);
-            return config?.AppSettings ?? new AppSettings();
+            var settings = config?.AppSettings ?? new AppSettings();
+
+            // Migration logic
+            var settingsModified = false;
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (!string.IsNullOrEmpty(settings.PrePrompt))
+            {
+                if (!settings.PrePrompts.Any())
+                {
+                    var newPrompt = new Prompt { Name = "Default", Content = settings.PrePrompt };
+                    settings.PrePrompts.Add(newPrompt);
+                    if (settings.ActivePrePromptId == null)
+                    {
+                        settings.ActivePrePromptId = newPrompt.Id;
+                    }
+                }
+                settings.PrePrompt = string.Empty;
+                settingsModified = true;
+            }
+
+            if (!string.IsNullOrEmpty(settings.PostPrompt))
+            {
+                if (!settings.PostPrompts.Any())
+                {
+                    var newPrompt = new Prompt { Name = "Default", Content = settings.PostPrompt };
+                    settings.PostPrompts.Add(newPrompt);
+                    if (settings.ActivePostPromptId == null)
+                    {
+                        settings.ActivePostPromptId = newPrompt.Id;
+                    }
+                }
+                settings.PostPrompt = string.Empty;
+                settingsModified = true;
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            if (settingsModified)
+            {
+                await SaveAppSettingsAsync(settings);
+            }
+
+            return settings;
         }
         catch (Exception ex)
         {

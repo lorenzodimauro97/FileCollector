@@ -106,17 +106,22 @@
 
         <div class="settings-section">
             <h4 class="panel-title">Prompts</h4>
-            <p class="text-muted small">Define pre-prompt and post-prompt content that will be included with the merged files.</p>
-            <div class="mb-3">
-                <label for="prePrompt" class="form-label">Pre-Prompt:</label>
-                <textarea id="prePrompt" class="form-control" rows="5" @bind="_appSettings.PrePrompt" @bind:after="MarkAsDirty"
-                          placeholder="Content to appear before any files..." disabled="@_isBusy"></textarea>
-            </div>
-            <div class="mb-3">
-                <label for="postPrompt" class="form-label">Post-Prompt:</label>
-                <textarea id="postPrompt" class="form-control" rows="5" @bind="_appSettings.PostPrompt" @bind:after="MarkAsDirty"
-                          placeholder="Content to appear after all files (but before the non-persistent user prompt)..." disabled="@_isBusy"></textarea>
-            </div>
+            <p class="text-muted small">Manage and select default pre-prompts and post-prompts to be included with the merged files.</p>
+            
+            <PromptManagerComponent PromptType="Pre-Prompt"
+                                    Prompts="_appSettings.PrePrompts"
+                                    ActivePromptId="_appSettings.ActivePrePromptId"
+                                    OnPromptsChanged="args => HandlePromptsChanged(args.Item1, args.Item2)"
+                                    OnActivePromptIdChanged="args => HandleActivePromptIdChanged(args.Item1, args.Item2)"
+                                    IsBusy="_isBusy" />
+
+            <PromptManagerComponent PromptType="Post-Prompt"
+                                    Prompts="_appSettings.PostPrompts"
+                                    ActivePromptId="_appSettings.ActivePostPromptId"
+                                    OnPromptsChanged="args => HandlePromptsChanged(args.Item1, args.Item2)"
+                                    OnActivePromptIdChanged="args => HandleActivePromptIdChanged(args.Item1, args.Item2)"
+                                    IsBusy="_isBusy"
+                                    Class="mt-4"/>
         </div>
     }
 </div>
@@ -307,6 +312,36 @@
             await SetStatusMessage("Error discarding changes. Settings might be in an inconsistent state.", false);
         }
         _isBusy = false;
+        StateHasChanged();
+    }
+    
+    private async Task HandlePromptsChanged(string promptType, List<Prompt> updatedPrompts)
+    {
+        if (_appSettings is null) return;
+        if (promptType == "Pre-Prompt")
+        {
+            _appSettings.PrePrompts = updatedPrompts;
+        }
+        else
+        {
+            _appSettings.PostPrompts = updatedPrompts;
+        }
+        await MarkAsDirty();
+        StateHasChanged();
+    }
+
+    private async Task HandleActivePromptIdChanged(string promptType, Guid? newId)
+    {
+        if (_appSettings is null) return;
+        if (promptType == "Pre-Prompt")
+        {
+            _appSettings.ActivePrePromptId = newId;
+        }
+        else
+        {
+            _appSettings.ActivePostPromptId = newId;
+        }
+        await MarkAsDirty();
         StateHasChanged();
     }
 

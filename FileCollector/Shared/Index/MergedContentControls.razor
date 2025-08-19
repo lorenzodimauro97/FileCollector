@@ -52,25 +52,41 @@
     </div>
 </div>
 
-<div class="d-flex flex-wrap gap-3 mb-3">
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="includePrePromptCheckbox"
-               checked="@IncludePrePrompt"
-               @onchange="HandleIncludePrePromptChanged"
-               disabled="@(IsMergingContent || string.IsNullOrWhiteSpace(AppSettings?.PrePrompt))">
-        <label class="form-check-label small" for="includePrePromptCheckbox">
-            Include Pre-Prompt
-        </label>
+<div class="d-flex flex-wrap gap-3 align-items-end mb-3">
+    <div class="flex-grow-1">
+        <label for="prePromptSelect" class="form-label small mb-1">Pre-Prompt</label>
+        <select id="prePromptSelect" class="form-select form-select-sm"
+                value="@SelectedPrePromptId"
+                @onchange="HandleSelectedPrePromptChanged"
+                disabled="@(IsMergingContent || AppSettings?.PrePrompts.Count == 0)">
+            <option value="@Guid.Empty">None</option>
+            @if (AppSettings?.PrePrompts != null)
+            {
+                @foreach (var prompt in AppSettings.PrePrompts)
+                {
+                    <option value="@prompt.Id">@prompt.Name</option>
+                }
+            }
+        </select>
     </div>
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="includePostPromptCheckbox"
-               checked="@IncludePostPrompt"
-               @onchange="HandleIncludePostPromptChanged"
-               disabled="@(IsMergingContent || string.IsNullOrWhiteSpace(AppSettings?.PostPrompt))">
-        <label class="form-check-label small" for="includePostPromptCheckbox">
-            Include Post-Prompt
-        </label>
+
+    <div class="flex-grow-1">
+        <label for="postPromptSelect" class="form-label small mb-1">Post-Prompt</label>
+        <select id="postPromptSelect" class="form-select form-select-sm"
+                value="@SelectedPostPromptId"
+                @onchange="HandleSelectedPostPromptChanged"
+                disabled="@(IsMergingContent || AppSettings?.PostPrompts.Count == 0)">
+            <option value="@Guid.Empty">None</option>
+            @if (AppSettings?.PostPrompts != null)
+            {
+                @foreach (var prompt in AppSettings.PostPrompts)
+                {
+                    <option value="@prompt.Id">@prompt.Name</option>
+                }
+            }
+        </select>
     </div>
+
     <div class="form-check">
         <input class="form-check-input" type="checkbox" id="includeFileTreeCheckbox"
                checked="@IncludeFileTreeInOutput"
@@ -80,6 +96,7 @@
             Include file/folder tree
         </label>
     </div>
+
     <div class="form-check">
         <input class="form-check-input" type="checkbox" id="privatizeDataCheckboxOutput"
                checked="@PrivatizeDataInOutput"
@@ -89,6 +106,7 @@
             Privatize Data
         </label>
     </div>
+
     <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="autoRefreshSwitch"
                checked="@IsAutoRefreshEnabled"
@@ -96,11 +114,10 @@
                role="switch"
                disabled="@IsMergingContent">
         <label class="form-check-label small" for="autoRefreshSwitch">
-            Auto-refresh prompt
+            Auto-refresh
         </label>
     </div>
 </div>
-
 
 @code {
     [Parameter] public bool IsMergingContent { get; set; }
@@ -111,8 +128,8 @@
     [Parameter] public EventCallback<string> UserPromptValueChanged { get; set; }
     [Parameter] public bool IncludeFileTreeInOutput { get; set; }
     [Parameter] public bool PrivatizeDataInOutput { get; set; }
-    [Parameter] public bool IncludePrePrompt { get; set; }
-    [Parameter] public bool IncludePostPrompt { get; set; }
+    [Parameter] public Guid? SelectedPrePromptId { get; set; }
+    [Parameter] public Guid? SelectedPostPromptId { get; set; }
     [Parameter] public AppSettings? AppSettings { get; set; }
     [Parameter] public string? CurrentDisplayRootPath { get; set; }
     [Parameter] public bool IsAutoRefreshEnabled { get; set; }
@@ -122,8 +139,8 @@
     [Parameter] public EventCallback OnClearUserPromptClicked { get; set; }
     [Parameter] public EventCallback<bool> OnIncludeFileTreeInOutputChanged { get; set; }
     [Parameter] public EventCallback<bool> OnPrivatizeDataInOutputChanged { get; set; }
-    [Parameter] public EventCallback<bool> OnIncludePrePromptChanged { get; set; }
-    [Parameter] public EventCallback<bool> OnIncludePostPromptChanged { get; set; }
+    [Parameter] public EventCallback<Guid?> OnSelectedPrePromptIdChanged { get; set; }
+    [Parameter] public EventCallback<Guid?> OnSelectedPostPromptIdChanged { get; set; }
     [Parameter] public EventCallback<bool> OnAutoRefreshEnabledChanged { get; set; }
 
     private string BoundUserPromptValue
@@ -154,19 +171,19 @@
         }
     }
     
-    private async Task HandleIncludePrePromptChanged(ChangeEventArgs e)
+    private async Task HandleSelectedPrePromptChanged(ChangeEventArgs e)
     {
-        if (e.Value is bool val)
+        if (Guid.TryParse(e.Value?.ToString(), out var guid))
         {
-            await OnIncludePrePromptChanged.InvokeAsync(val);
+            await OnSelectedPrePromptIdChanged.InvokeAsync(guid == Guid.Empty ? null : guid);
         }
     }
     
-    private async Task HandleIncludePostPromptChanged(ChangeEventArgs e)
+    private async Task HandleSelectedPostPromptChanged(ChangeEventArgs e)
     {
-        if (e.Value is bool val)
+        if (Guid.TryParse(e.Value?.ToString(), out var guid))
         {
-            await OnIncludePostPromptChanged.InvokeAsync(val);
+            await OnSelectedPostPromptIdChanged.InvokeAsync(guid == Guid.Empty ? null : guid);
         }
     }
 

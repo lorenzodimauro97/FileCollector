@@ -131,8 +131,8 @@
                                    @bind-UserPromptValue="UserPrompt"
                                    IncludeFileTreeInOutput="_includeFileTreeInOutput"
                                    PrivatizeDataInOutput="_privatizeDataInOutput"
-                                   IncludePrePrompt="_includePrePrompt"
-                                   IncludePostPrompt="_includePostPrompt"
+                                   SelectedPrePromptId="_selectedPrePromptId"
+                                   SelectedPostPromptId="_selectedPostPromptId"
                                    AppSettings="_appSettings"
                                    CurrentDisplayRootPath="@_currentDisplayRootPath"
                                    IsAutoRefreshEnabled="_isAutoRefreshEnabled"
@@ -141,8 +141,8 @@
                                    OnClearUserPromptClicked="ClearUserPromptAndRefresh"
                                    OnIncludeFileTreeInOutputChanged="HandleIncludeFileTreeInOutputChangedAsync"
                                    OnPrivatizeDataInOutputChanged="HandlePrivatizeDataInOutputChangedAsync"
-                                   OnIncludePrePromptChanged="HandleIncludePrePromptChangedAsync"
-                                   OnIncludePostPromptChanged="HandleIncludePostPromptChangedAsync"
+                                   OnSelectedPrePromptIdChanged="HandleSelectedPrePromptIdChangedAsync"
+                                   OnSelectedPostPromptIdChanged="HandleSelectedPostPromptIdChangedAsync"
                                    OnAutoRefreshEnabledChanged="HandleAutoRefreshEnabledChangedAsync"/>
         </div>
 
@@ -175,8 +175,8 @@
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(500);
     private bool _includeFileTreeInOutput;
     private bool _privatizeDataInOutput;
-    private bool _includePrePrompt = true;
-    private bool _includePostPrompt = true;
+    private Guid? _selectedPrePromptId;
+    private Guid? _selectedPostPromptId;
     private bool _isAutoRefreshEnabled = true;
 
     private AppSettings? _appSettings;
@@ -220,21 +220,10 @@
         bool hasContentToGenerate =
             _selectedFilePaths.Any(p => GetNodeByPath(p) is { IsDirectory: false }) ||
             _includeFileTreeInOutput ||
-            (_includePrePrompt && !string.IsNullOrWhiteSpace(_appSettings?.PrePrompt)) ||
-            (_includePostPrompt && !string.IsNullOrWhiteSpace(_appSettings?.PostPrompt)) ||
+            (_selectedPrePromptId.HasValue && _appSettings?.PrePrompts.Any(p => p.Id == _selectedPrePromptId) == true) ||
+            (_selectedPostPromptId.HasValue && _appSettings?.PostPrompts.Any(p => p.Id == _selectedPostPromptId) == true) ||
             !string.IsNullOrWhiteSpace(UserPrompt);
-
-        // Copy is only possible if there is already generated text.
-        // Refresh is possible if there is content to generate.
-        // We can simplify this for the UI component by having one flag.
-        // If there's content to generate, Refresh should be possible. If there's *also* text, Copy is possible.
-        // The child component already disables copy based on an empty string (`_mergedFileContentPlainText`).
-        // Let's pass a flag for `CanRefresh` and let it handle its own `CanCopy` state.
-        // For now, let's make `CanGenerateOrCopy` reflect `CanRefresh` state.
-        // The check in MergedContentControls for `!string.IsNullOrEmpty(_mergedFileContentPlainText)` is no longer there.
-        // Let's re-add it inside the component.
-
-        // The parameter on the component is `CanGenerateOrCopy`. Let's make it represent if there's anything to do.
+        
         return hasContentToGenerate || !string.IsNullOrEmpty(_mergedFileContentPlainText);
     }
 
@@ -242,7 +231,9 @@
     {
         _appSettings = await SettingsService.GetAppSettingsAsync();
         _includeFileTreeInOutput = false; // Default session value
-        _privatizeDataInOutput = _appSettings.PrivatizeDataInOutput; // Initialize from persisted settings
+        _privatizeDataInOutput = _appSettings.PrivatizeDataInOutput;
+        _selectedPrePromptId = _appSettings.ActivePrePromptId;
+        _selectedPostPromptId = _appSettings.ActivePostPromptId;
 
         var persistedState = NavStateService.ConsumePersistedState();
 
@@ -482,15 +473,15 @@
         await GenerateMergedContentAsync();
     }
 
-    private async Task HandleIncludePrePromptChangedAsync(bool newValue)
+    private async Task HandleSelectedPrePromptIdChangedAsync(Guid? newId)
     {
-        _includePrePrompt = newValue;
+        _selectedPrePromptId = newId;
         await GenerateMergedContentAsync();
     }
 
-    private async Task HandleIncludePostPromptChangedAsync(bool newValue)
+    private async Task HandleSelectedPostPromptIdChangedAsync(Guid? newId)
     {
-        _includePostPrompt = newValue;
+        _selectedPostPromptId = newId;
         await GenerateMergedContentAsync();
     }
 
@@ -571,16 +562,18 @@
         _appSettings ??= await SettingsService.GetAppSettingsAsync();
         var filesToMerge = _selectedFilePaths.Select(GetNodeByPath).Where(node => node is { IsDirectory: false }).OfType<FileSystemItem>().OrderBy(node => node.FullPath).ToList();
 
+        var prePrompt = _appSettings?.PrePrompts.FirstOrDefault(p => p.Id == _selectedPrePromptId);
+        var postPrompt = _appSettings?.PostPrompts.FirstOrDefault(p => p.Id == _selectedPostPromptId);
+
         var result = await ContentMergerSvc.GenerateMergedContentAsync(
             filesToMerge,
-            _appSettings,
+            prePrompt?.Content,
+            postPrompt?.Content,
             _userPromptValue,
             _currentDisplayRootPath,
             _includeFileTreeInOutput,
             _privatizeDataInOutput,
-            allDisplayRootItems: DisplayRootItems,
-            includePrePrompt: _includePrePrompt,
-            includePostPrompt: _includePostPrompt
+            allDisplayRootItems: DisplayRootItems
         );
 
         _mergedFilesToDisplay = result.MergedFilesToDisplay;

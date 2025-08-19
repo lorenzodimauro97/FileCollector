@@ -253,35 +253,34 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
 
     public async Task<MergedContentResult> GenerateMergedContentAsync(
         IEnumerable<FileSystemItem> filesToMerge,
-        AppSettings appSettings,
+        string? prePromptContent,
+        string? postPromptContent,
         string userPrompt,
         string? currentDisplayRootPath,
         bool includeFileTreeInOutput,
         bool privatizeDataInOutput,
-        IEnumerable<FileSystemItem> allDisplayRootItems,
-        bool includePrePrompt,
-        bool includePostPrompt)
+        IEnumerable<FileSystemItem> allDisplayRootItems)
     {
         _logger.LogInformation(
-            "[GenerateMergedContentAsync] Starting. privatizeData: {PrivatizeFlag}, includePre: {IncludePre}, includePost: {IncludePost}",
-            privatizeDataInOutput, includePrePrompt, includePostPrompt);
+            "[GenerateMergedContentAsync] Starting. privatizeData: {PrivatizeFlag}", privatizeDataInOutput);
+            
         var mergedFilesToDisplay = new List<MergedFileDisplayItem>();
         var sbPlainText = new StringBuilder();
         var plainTextLanguage = new PlainTextLanguageDefinition();
         var overallErrorMessage = "";
 
-        if (includePrePrompt && !string.IsNullOrWhiteSpace(appSettings.PrePrompt))
+        if (!string.IsNullOrWhiteSpace(prePromptContent))
         {
             _logger.LogDebug("[GenerateMergedContentAsync] Adding Pre-Prompt.");
             mergedFilesToDisplay.Add(new MergedFileDisplayItem
             {
                 FilePath = "SYSTEM_PRE_PROMPT",
                 RelativePath = "Pre-Prompt",
-                Content = appSettings.PrePrompt,
+                Content = prePromptContent,
                 Language = plainTextLanguage,
                 TokenCount = 0
             });
-            AppendSectionToPlainText(sbPlainText, "Pre-Prompt", appSettings.PrePrompt);
+            AppendSectionToPlainText(sbPlainText, "Pre-Prompt", prePromptContent);
         }
 
         if (includeFileTreeInOutput && !string.IsNullOrEmpty(currentDisplayRootPath) && allDisplayRootItems.Any())
@@ -418,18 +417,18 @@ public class ContentMergingService(ILogger<ContentMergingService> logger)
             AppendSectionToPlainText(sbPlainText, "User Prompt", userPrompt);
         }
 
-        if (includePostPrompt && !string.IsNullOrWhiteSpace(appSettings.PostPrompt))
+        if (!string.IsNullOrWhiteSpace(postPromptContent))
         {
             _logger.LogDebug("[GenerateMergedContentAsync] Adding Post-Prompt.");
             mergedFilesToDisplay.Add(new MergedFileDisplayItem
             {
                 FilePath = "SYSTEM_POST_PROMPT",
                 RelativePath = "Post-Prompt",
-                Content = appSettings.PostPrompt,
+                Content = postPromptContent,
                 Language = plainTextLanguage,
                 TokenCount = 0
             });
-            AppendSectionToPlainText(sbPlainText, "Post-Prompt", appSettings.PostPrompt);
+            AppendSectionToPlainText(sbPlainText, "Post-Prompt", postPromptContent);
         }
 
         var finalPlainTextContent = sbPlainText.ToString().TrimEnd();

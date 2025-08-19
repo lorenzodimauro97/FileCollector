@@ -1,0 +1,39 @@
+﻿.prompt-manager-container {
+    border: 1px solid var(--border-color);
+    border-radius: var(--mantine-radius-md);
+    padding: var(--mantine-spacing-lg);
+    background-color: #f8f9fa;
+}
+
+.prompt-manager-container h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: var(--mantine-spacing-md);
+    padding-bottom: var(--mantine-spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.prompt-list .list-group-item {
+    font-size: var(--mantine-font-size-xs);
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+    cursor: pointer;
+    text-align: left;
+}
+
+.prompt-editor {
+    padding: var(--mantine-spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--mantine-radius-sm);
+    background-color: var(--card-bg-color);
+}
+
+.prompt-editor-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 200px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--mantine-radius-sm);
+    background-color: var(--card-bg-color);
+}
